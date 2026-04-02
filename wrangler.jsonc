@@ -1,0 +1,87 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skillset-ai-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "APP_BASE_URL": "http://127.0.0.1:8787",
+    "ACCESS_TOKEN_TTL_SECONDS": "900",
+    "REFRESH_TOKEN_TTL_SECONDS": "2592000",
+    "ROOM_TOKEN_TTL_SECONDS": "300",
+    "RATE_LIMIT_WINDOW_SECONDS": "60",
+    "RATE_LIMIT_MAX_REQUESTS": "60",
+    "AUTH_RATE_LIMIT_MAX_REQUESTS": "10",
+    "AI_TEXT_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    "AI_EMBEDDING_MODEL": "@cf/baai/bge-base-en-v1.5",
+    "YOUTUBE_API_KEY": ""
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skillset-ai-db",
+      "database_id": "replace-with-d1-database-id"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "replace-with-kv-namespace-id",
+      "preview_id": "replace-with-kv-preview-namespace-id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_BUCKET",
+      "bucket_name": "skillset-ai-content",
+      "preview_bucket_name": "skillset-ai-content-preview"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "CONTENT_INDEX",
+      "index_name": "skillset-ai-content-index"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "CONTENT_QUEUE",
+        "queue": "skillset-ai-content-jobs"
+      },
+      {
+        "binding": "GAMIFICATION_QUEUE",
+        "queue": "skillset-ai-gamification-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "skillset-ai-content-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 10
+      },
+      {
+        "queue": "skillset-ai-gamification-jobs",
+        "max_batch_size": 25,
+        "max_batch_timeout": 10
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOM_HUB",
+        "class_name": "RoomHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RoomHub"]
+    }
+  ]
+}
