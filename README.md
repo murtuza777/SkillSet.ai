@@ -1,88 +1,269 @@
-# SkillSet.ai: Collaborative Skill-Based Learning and Progress Tracking Platform
+# SkillSet.ai Backend
 
-## Problem Statement
-Traditional education often prioritizes theoretical classroom learning over practical, skill-based training, leaving students unprepared for real-world challenges. There’s also a lack of platforms that connect students with similar interests to learn and build skills collaboratively.
+Cloudflare-native backend for SkillSet.ai built from [impl.md](./impl.md).
 
-## Solution Idea
-SkillSet.ai is a skill-focused peer-to-peer learning and progress tracking platform. It empowers students to learn practical, in-demand skills collaboratively while receiving real-time feedback on their progress.
+## Stack
 
-## Key Features
+- Cloudflare Workers for the API runtime
+- Hono for routing
+- D1 for relational data
+- Durable Objects for realtime rooms and WebSocket coordination
+- Workers AI for learning-path generation, task generation, and embeddings
+- Vectorize for semantic search
+- KV for cache, rate limiting, and verification/session helpers
+- R2 for raw content payloads and attachments
+- Queues for content ingestion and gamification processing
 
-### 1. Skill-Based Peer Matching
-- AI matches students based on skills they want to learn (e.g., coding, design, communication, marketing).
-- Focuses on industry-relevant skills rather than traditional academic subjects.
-- Allows students to join peer groups or find mentors with relevant expertise.
+## Implemented Scope
 
-### 2. Collaborative Learning Spaces
-- Interactive tools like collaborative whiteboards, shared coding environments, and project workspaces.
-- Group projects to work on real-world problems (e.g., creating a website, designing a logo, or building a marketing plan).
-- Peer feedback and group brainstorming sessions.
+Phase 1:
+- JWT access token auth with refresh-token rotation
+- user profiles and user skills
+- curated content discovery
+- AI-generated learning paths
+- task submission and progress tracking
+- 1:1 and small-room chat with Durable Objects
+- basic points system
 
-### 3. AI-Powered Progress Tracking for Skill Development
-- Dashboards tracking progress in skills like problem-solving, creativity, and teamwork.
-- Insights on skill mastery levels and areas for improvement.
-- Personalized suggestions for resources (e.g., online courses, articles, or tools).
+Phase 2:
+- YouTube and docs connectors
+- queue-based ingestion pipeline
+- project rooms and collaboration spaces
+- peer matching
+- badges, levels, and leaderboards
+- admin content curation and reindex APIs
 
-### 4. Gamified Skill Learning
-- Earn badges and points for completing tasks, collaborating, or mastering skills.
-- Leaderboards to encourage friendly competition and active participation.
+## Folder Structure
 
-### 5. Open-Source and Customizable
-- Institutions and developers can integrate SkillSet.ai into existing systems or build new modules tailored for specific skill sets.
+```text
+SkillSet.ai/
++-- impl.md
++-- schema.sql
++-- seed.sql
++-- wrangler.jsonc
++-- .dev.vars.example
++-- package.json
++-- src/
+    +-- index.ts
+    +-- types.ts
+    +-- db/
+    |   +-- client.ts
+    +-- durable/
+    |   +-- room-hub.ts
+    +-- lib/
+    |   +-- auth.ts
+    |   +-- crypto.ts
+    |   +-- http.ts
+    |   +-- rate-limit.ts
+    |   +-- session.ts
+    +-- middleware/
+    |   +-- auth.ts
+    +-- routes/
+    |   +-- admin.ts
+    |   +-- auth.ts
+    |   +-- chat.ts
+    |   +-- content.ts
+    |   +-- gamification.ts
+    |   +-- learning.ts
+    |   +-- matching.ts
+    |   +-- projects.ts
+    |   +-- skills.ts
+    |   +-- users.ts
+    +-- services/
+        +-- admin-service.ts
+        +-- ai-service.ts
+        +-- auth-service.ts
+        +-- chat-service.ts
+        +-- content-service.ts
+        +-- gamification-service.ts
+        +-- learning-service.ts
+        +-- matching-service.ts
+        +-- project-service.ts
+        +-- skills-service.ts
+        +-- user-service.ts
+```
 
-## Skills Offered
-- Coding and Software Development
-- Graphic Design
-- Public Speaking and Communication
-- Digital Marketing
-- Financial Literacy
-- Entrepreneurship Basics
-- Teamwork and Leadership
+## Cloudflare Setup
 
-## Impact
+### 1. Install dependencies
 
-### For Students
-- Prepares them with practical, real-world skills.
-- Encourages collaboration and teamwork, which are essential for professional growth.
-- Reduces the monotony of traditional classroom learning.
+```bash
+npm install
+```
 
-### For Teachers and Institutions
-- Tracks students’ progress in acquiring practical skills.
-- Provides a scalable way to implement project-based learning in schools and universities.
+### 2. Authenticate Wrangler
 
-### For Employers
-- Creates a pipeline of job-ready graduates with skills relevant to industry needs.
+```bash
+npx wrangler login
+```
 
-## Technological Innovation
+### 3. Create Cloudflare resources
 
-### Artificial Intelligence
-- Skill-matching algorithms that pair students with peers or mentors based on their learning goals.
-- Analytics to assess skill development and generate personalized learning paths.
+Create D1:
 
-### Collaboration Tools
-- Real-time collaborative environments like coding platforms or design boards.
+```bash
+npx wrangler d1 create skillset-ai-db
+```
 
-### Gamification
-- Rewards and challenges to make skill acquisition engaging and interactive.
+Create KV:
 
-### Open-Source Framework
-- Customizable for different educational institutions or regions.
+```bash
+npx wrangler kv namespace create CACHE
+npx wrangler kv namespace create CACHE --preview
+```
 
-## Business Model
+Create R2 buckets:
 
-### Freemium Model
-- Basic skill-learning tools are free.
-- Premium features include advanced analytics, certification, and industry-specific resources.
+```bash
+npx wrangler r2 bucket create skillset-ai-content
+npx wrangler r2 bucket create skillset-ai-content-preview
+```
 
-### Institutional Partnerships
-- Offer SkillSet.ai to schools, colleges, and training institutions as a licensed platform.
+Create queues:
 
-### Skill Marketplace
-- Collaborate with industry professionals to create advanced skill modules that students can purchase.
+```bash
+npx wrangler queues create skillset-ai-content-jobs
+npx wrangler queues create skillset-ai-gamification-jobs
+```
 
-## Why It’s a Winning Idea
-- **Focus on Real-World Impact:** Addresses a global need for practical skill-building over rote memorization.
-- **Mass Appeal:** Benefits students, educators, and employers alike.
-- **Innovative and Scalable:** Combines AI, gamification, and collaboration for an engaging learning experience.
-- **Open Innovation:** Open-source design encourages customization and contributions from a global community.
+Create Vectorize index.
+This project uses `@cf/baai/bge-base-en-v1.5`, which produces 768-dimension embeddings, so the index must match that:
 
+```bash
+npx wrangler vectorize create skillset-ai-content-index --dimensions=768 --metric=cosine
+```
+
+Workers AI is bound directly in `wrangler.jsonc`, so you do not need an external AI API key.
+
+### 4. Update `wrangler.jsonc`
+
+Replace placeholder values in [wrangler.jsonc](./wrangler.jsonc):
+
+- `database_id` for the D1 database
+- KV namespace ids
+- bucket names if you changed them
+- Vectorize index name if you changed it
+
+### 5. Set secrets
+
+Required:
+
+```bash
+npx wrangler secret put JWT_SECRET
+```
+
+Optional:
+
+```bash
+npx wrangler secret put YOUTUBE_API_KEY
+```
+
+## D1 Setup
+
+Run the schema and seed files against your D1 database after updating `wrangler.jsonc`:
+
+```bash
+npx wrangler d1 execute skillset-ai-db --remote --file=schema.sql
+npx wrangler d1 execute skillset-ai-db --remote --file=seed.sql
+```
+
+If you want a disposable local database during development, you can also use:
+
+```bash
+npx wrangler d1 execute skillset-ai-db --local --file=schema.sql
+npx wrangler d1 execute skillset-ai-db --local --file=seed.sql
+```
+
+## Local Development
+
+Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and fill in local values:
+
+```bash
+Copy-Item .dev.vars.example .dev.vars
+```
+
+Then run:
+
+```bash
+npm run typecheck
+npm run dev
+```
+
+Note:
+- `npm run dev` uses `wrangler dev --remote`
+- remote dev is intentional because Workers AI and your bound Cloudflare resources run on Cloudflare
+
+## Production Deployment
+
+Do not deploy until you are ready. When you are, deploy with:
+
+```bash
+npm run deploy
+```
+
+## Required Endpoints
+
+Auth:
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/me`
+- `POST /auth/verify-email`
+
+Users:
+- `GET /users/me`
+- `PATCH /users/me`
+- `PUT /users/me/skills`
+- `GET /users/me/activity`
+- `GET /profiles/:id`
+
+Skills:
+- `GET /skills`
+- `GET /skills/search?q=`
+- `GET /skills/:slug`
+
+Content:
+- `POST /content/discover`
+- `GET /content/sources/:id`
+- `POST /content/reindex`
+- `GET /content/search?q=`
+
+Learning:
+- `POST /learning-paths/generate`
+- `GET /learning-paths/:id`
+- `POST /learning-paths/:id/enroll`
+- `GET /modules/:id`
+- `POST /tasks/:id/submit`
+
+Projects:
+- `POST /projects`
+- `GET /projects/:id`
+- `POST /projects/:id/join`
+- `PATCH /projects/:id`
+- `GET /projects/:id/members`
+
+Matching:
+- `GET /matches/recommendations`
+- `POST /matches/:id/accept`
+- `POST /matches/:id/reject`
+
+Chat:
+- `GET /rooms`
+- `POST /rooms`
+- `GET /rooms/:id/messages`
+- `POST /rooms/:id/messages`
+- `POST /rooms/:id/join-token`
+- `GET /ws/rooms/:roomId`
+
+Gamification:
+- `GET /gamification/me`
+- `GET /badges`
+- `GET /leaderboards`
+- `GET /leaderboards/:scope`
+
+Admin:
+- `GET /admin/metrics`
+- `POST /admin/content-sources`
+- `POST /admin/badges`
+- `POST /admin/reindex-skill`
