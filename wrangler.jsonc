@@ -18,19 +18,19 @@
 		"AI_EMBEDDING_MODEL": "@cf/baai/bge-base-en-v1.5",
 		"YOUTUBE_API_KEY": ""
 	},
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "skillset-ai-db",
-      "database_id": "3be39715-bd46-4623-9aa0-f1a6f97a784f",
-      "remote": true
-    }
-  ],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "skillset-ai-db",
+			"database_id": "3be39715-bd46-4623-9aa0-f1a6f97a784f",
+			"remote": true
+		}
+	],
   "kv_namespaces": [
     {
       "binding": "CACHE",
       "id": "f6e12208448f4db7b1fb79e4786a7fab",
-      "preview_id": "replace-with-kv-preview-namespace-id",
+      "preview_id": "01a35d9918d146ff96f44db27147fb99",
       "remote": true
     }
   ],
@@ -41,12 +41,13 @@
 			"preview_bucket_name": "skillset-ai-content-preview"
 		}
 	],
-	"vectorize": [
-		{
-			"binding": "CONTENT_INDEX",
-			"index_name": "skillset-ai-content-index"
-		}
-	],
+  "vectorize": [
+    {
+      "binding": "CONTENT_INDEX",
+      "index_name": "skillset-ai-content-index",
+      "remote": true
+    }
+  ],
 	"ai": {
 		"binding": "AI"
 	},
