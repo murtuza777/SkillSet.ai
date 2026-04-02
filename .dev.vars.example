@@ -1,0 +1,2 @@
+JWT_SECRET=replace-with-local-jwt-secret
+YOUTUBE_API_KEY=replace-with-your-youtube-data-api-key
