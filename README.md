@@ -190,8 +190,14 @@ npm run dev
 ```
 
 Note:
-- `npm run dev` uses `wrangler dev --remote`
-- remote dev is intentional because Workers AI and your bound Cloudflare resources run on Cloudflare
+- `npm run dev` now uses plain `wrangler dev`
+- this is important because the app uses a SQLite-backed Durable Object, which does not work correctly under `wrangler dev --remote`
+- your bindings stay connected to remote Cloudflare resources because they are marked with `"remote": true` in [wrangler.jsonc](./wrangler.jsonc)
+
+Current repo status:
+- the backend Worker is implemented and runnable
+- the old frontend scaffold files still exist, but the actual React app source is no longer present
+- that means there is not yet a second frontend dev server to start from this repo
 
 ## Production Deployment
 

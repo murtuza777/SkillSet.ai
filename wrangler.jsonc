@@ -26,28 +26,29 @@
 			"remote": true
 		}
 	],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "f6e12208448f4db7b1fb79e4786a7fab",
-      "preview_id": "01a35d9918d146ff96f44db27147fb99",
-      "remote": true
-    }
-  ],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "f6e12208448f4db7b1fb79e4786a7fab",
+			"preview_id": "01a35d9918d146ff96f44db27147fb99",
+			"remote": true
+		}
+	],
 	"r2_buckets": [
 		{
 			"binding": "CONTENT_BUCKET",
 			"bucket_name": "skillset-ai-content",
-			"preview_bucket_name": "skillset-ai-content-preview"
+			"preview_bucket_name": "skillset-ai-content-preview",
+			"remote": true
 		}
 	],
-  "vectorize": [
-    {
-      "binding": "CONTENT_INDEX",
-      "index_name": "skillset-ai-content-index",
-      "remote": true
-    }
-  ],
+	"vectorize": [
+		{
+			"binding": "CONTENT_INDEX",
+			"index_name": "skillset-ai-content-index",
+			"remote": true
+		}
+	],
 	"ai": {
 		"binding": "AI"
 	},
