@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { GlobeInteractive } from "@/components/ui/cobe-globe-interactive";
 import { Panel } from "@/components/ui/panel";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -67,15 +68,18 @@ export default function Home() {
           }}
         />
         <div className="relative z-10 flex flex-col items-center space-y-8 text-center">
-          <span className="pill pointer-events-auto bg-[var(--brand-soft)] text-[var(--brand)]">
-            <Sparkles className="h-4 w-4" />
-            AI-powered collaborative learning
-          </span>
+          <div className="pointer-events-auto flex flex-col items-center gap-3 sm:gap-4">
+            <BrandLogo size={80} className="drop-shadow-sm" priority />
+            <span className="pill bg-[var(--brand-soft)] text-[var(--brand)]">
+              <Sparkles className="h-4 w-4" />
+              AI-powered collaborative learning
+            </span>
+          </div>
           <div className="space-y-4">
-            <h1 className="section-title mx-auto max-w-4xl text-5xl font-bold leading-[0.94] tracking-[-0.06em] sm:text-6xl">
+            <h1 className="section-title mx-auto max-w-4xl text-balance text-4xl font-bold leading-[0.98] tracking-[-0.05em] sm:text-5xl sm:leading-[0.94] sm:tracking-[-0.06em] lg:text-6xl">
               Learn a skill, meet the right peers, and ship projects with momentum.
             </h1>
-            <p className="mx-auto max-w-2xl text-xl text-[var(--muted)]">
+            <p className="mx-auto max-w-2xl text-pretty text-base text-[var(--muted)] sm:text-lg lg:text-xl">
               SkillSet.ai combines AI-personalized learning paths, smart content
               discovery, project rooms, peer matching, and gamified progress -
               all in one platform.

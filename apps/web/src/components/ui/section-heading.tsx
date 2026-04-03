@@ -26,7 +26,11 @@ export function SectionHeading({
           <p className="max-w-3xl text-lg text-[var(--muted)]">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? (
+        <div className="w-full shrink-0 sm:w-auto [&_a]:block [&_button]:w-full sm:[&_a]:inline-flex sm:[&_button]:w-auto">
+          {action}
+        </div>
+      ) : null}
     </div>
   );
 }

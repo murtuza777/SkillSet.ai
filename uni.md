@@ -257,31 +257,158 @@ The core database is Cloudflare D1. The schema is implemented in `schema.sql`.
 - `Durable Objects` were selected for room state and ordered realtime coordination.
 - `Queues` were selected for asynchronous ingestion and gamification work.
 
-## 11. Diagram Descriptions
+## 11. Architecture diagrams (implementation-traced)
 
-### 11.1 System Architecture Diagram
+Each diagram below maps to **files and routes in this repository**. Mermaid renders in GitHub, VS Code, and most Markdown preview tools.
 
-Text form:
+### 11.1 Production topology and Worker bindings
 
-`Browser -> Next.js Frontend Worker -> Next.js API Proxy Routes -> Hono API Worker -> D1 / KV / R2 / Vectorize / Workers AI / Queues / Durable Objects`
+Cloudflare resources are declared in `wrangler.jsonc` and typed in `src/types.ts` (`AppBindings`). Queue consumers are wired in `src/index.ts` (`export default { fetch, queue }`).
 
-### 11.2 Learning Path Generation Diagram
+```mermaid
+flowchart TB
+  subgraph browser [Browser]
+    U[User]
+  end
+  subgraph edge [Cloudflare Workers]
+    FE[Next.js app — apps/web OpenNext Worker]
+    API[Hono API — src/index.ts]
+    DO[RoomHub Durable Object — src/durable/room-hub.ts]
+  end
+  subgraph data [Bindings from wrangler.jsonc]
+    D1[(D1 DB)]
+    KV[(KV CACHE)]
+    R2[(R2 CONTENT_BUCKET)]
+    V[(Vectorize CONTENT_INDEX)]
+    AI[Workers AI binding AI]
+  end
+  U --> FE
+  FE -->|HTTP /api/* proxy| API
+  API --> D1
+  API --> KV
+  API --> R2
+  API --> V
+  API --> AI
+  API -->|WebSocket upgrade /ws/rooms/:id| DO
+  DO -->|persist messages| D1
+```
 
-Text form:
+### 11.2 Browser → Next.js → Hono request path
 
-`User skill goal -> content discovery -> source metadata in D1 -> raw payload in R2 -> chunks + embeddings -> Vectorize retrieval -> Workers AI JSON generation -> path/modules/tasks stored in D1`
+REST calls from the web app go through `apps/web/src/app/api/[...path]/route.ts`, which builds the upstream path (including `/api/skills/*` and squad chat paths) and forwards via `apps/web/src/lib/server/backend-proxy.ts` using `SKILLSET_API_BASE_URL`. The Hono app mounts routes in `src/index.ts`.
 
-### 11.3 Realtime Collaboration Diagram
+```mermaid
+sequenceDiagram
+  participant B as Browser / React
+  participant N as Next route handler
+  participant P as backend-proxy.ts
+  participant H as Hono src/index.ts
+  participant S as Route module e.g. src/routes/auth.ts
+  B->>N: fetch /api/users/me (cookie)
+  N->>P: proxyToBackend()
+  P->>H: forward Authorization + cookies
+  H->>S: /users/me
+  S->>H: JSON
+  H->>P: response
+  P->>N: Set-Cookie refresh if needed
+  N->>B: JSON
+```
 
-Text form:
+### 11.3 Authentication and session cookies
 
-`Frontend -> request join token -> API validates membership -> client opens WebSocket -> Durable Object manages room state -> messages persisted in D1 -> broadcasts sent to connected peers`
+Auth endpoints live under `src/routes/auth.ts` and `src/services/auth-service.ts`. The Next layer stores httpOnly cookies (`skillset_access`, `skillset_refresh`) through dedicated handlers under `apps/web/src/app/api/auth/*` that also call the same backend.
 
-### 11.4 Gamification Diagram
+```mermaid
+flowchart LR
+  subgraph client [apps/web]
+    A[auth page — apps/web/src/app/auth/page.tsx]
+    AC[api/auth/login route]
+  end
+  subgraph api [Worker API]
+    R[src/routes/auth.ts]
+    S[src/services/auth-service.ts]
+    D1[(D1 users refresh_tokens)]
+    KV[(KV verification guest)]
+  end
+  A -->|postJson /auth/login| AC
+  AC --> R
+  R --> S
+  S --> D1
+  S --> KV
+```
 
-Text form:
+### 11.4 Learning path generation (REST trace)
 
-`Task submission / project completion -> activity log -> Queue message -> point ledger update -> badge evaluation -> leaderboard snapshot`
+`POST /learning-paths/generate` is defined in `src/routes/learning.ts` and implemented in `src/services/learning-service.ts`. It uses `env.AI` and `env.DB` per `AppBindings`.
+
+```mermaid
+sequenceDiagram
+  participant U as Learner UI apps/web
+  participant H as learning routes
+  participant L as learning-service.ts
+  participant AI as Workers AI
+  participant DB as D1
+  U->>H: POST /learning-paths/generate JSON skillId
+  H->>L: generateLearningPath(env, DB, userId, payload)
+  L->>AI: model env.AI_TEXT_MODEL
+  AI-->>L: structured path
+  L->>DB: insert learning_paths modules lessons tasks
+  L-->>H: path record
+  H-->>U: 201 JSON
+```
+
+### 11.5 Realtime chat: join token, WebSocket, Durable Object
+
+HTTP messaging: `src/routes/chat.ts` (`POST /rooms/:id/messages`) calls `createMessage` then `broadcastRoomEvent`. WebSocket: `GET /ws/rooms/:roomId` in `src/index.ts` forwards to `RoomHub` (`src/durable/room-hub.ts`). The client requests a token from `POST /rooms/:id/join-token` and opens the socket in `apps/web/src/hooks/use-room-socket.ts`.
+
+```mermaid
+sequenceDiagram
+  participant C as use-room-socket.ts
+  participant API as chat routes + index.ts
+  participant DO as RoomHub
+  participant DB as D1
+  C->>API: POST /rooms/:id/join-token
+  API->>DB: ensureRoomMember
+  API-->>C: websocketUrl + token
+  C->>DO: WebSocket connect wss .../ws/rooms/:roomId?token=
+  DO->>DO: verifyRoomToken
+  C->>DO: message.send JSON
+  DO->>DB: createMessage chat-service
+  DO->>C: broadcast message.received
+```
+
+### 11.6 Content discovery, R2, Vectorize, optional queue
+
+`src/services/content-service.ts` writes metadata to D1, blobs to `CONTENT_BUCKET`, vectors to `CONTENT_INDEX`, and **optionally** enqueues work on `CONTENT_QUEUE` when that binding exists. The queue consumer in `src/index.ts` calls `ingestSourceById` and `discoverContent` for `reindex_skill` messages.
+
+```mermaid
+flowchart TB
+  subgraph api [content routes — src/routes/content.ts]
+    CR[HTTP handlers]
+  end
+  subgraph svc [content-service.ts]
+    DISC[discoverContent]
+    ING[ingestSourceById]
+  end
+  CR --> DISC
+  DISC --> D1[(D1 content_sources)]
+  DISC --> R2[(R2 payloads)]
+  ING --> V[(Vectorize embeddings)]
+  DISC -->|if CONTENT_QUEUE bound| Q{{Queue}}
+  Q -->|batch.queue in index.ts| ING
+```
+
+### 11.7 Gamification async path (optional queue)
+
+`src/services/gamification-service.ts` may send messages to `GAMIFICATION_QUEUE`. `src/index.ts` `queue()` dispatches to `processGamificationQueueMessage` when the message is not a content type.
+
+```mermaid
+flowchart LR
+  E[Task / activity event] --> G[gamification-service.ts]
+  G -->|if GAMIFICATION_QUEUE bound| Q{{Queue}}
+  Q -->|index.ts queue handler| P[processGamificationQueueMessage]
+  P --> D1[(D1 point_ledger activity_logs)]
+```
 
 ## 12. Deployment Design
 

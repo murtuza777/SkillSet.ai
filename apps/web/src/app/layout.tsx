@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "SkillSet.ai",
   description:
     "Cloudflare-native collaborative learning paths, peer matching, chat, projects, and gamified progress.",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

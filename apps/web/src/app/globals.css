@@ -17,6 +17,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
   font-family: var(--font-body), "Segoe UI", sans-serif;
 }
 

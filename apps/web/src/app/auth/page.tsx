@@ -5,7 +5,10 @@ import { ArrowRight, MailCheck, Rocket, UserRoundPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import Link from "next/link";
+
 import { Panel } from "@/components/ui/panel";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { ApiError, postJson } from "@/lib/api-client";
 import type { SessionUser } from "@/types/domain";
@@ -80,6 +83,10 @@ export default function AuthPage() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <Panel className="hero-mesh space-y-6">
+        <Link href="/" className="inline-flex items-center gap-3 text-[var(--ink)]">
+          <BrandLogo size={52} priority />
+          <span className="section-title text-xl font-bold sm:text-2xl">SkillSet.ai</span>
+        </Link>
         <SectionHeading
           eyebrow="Welcome"
           title="Start learning on your terms."

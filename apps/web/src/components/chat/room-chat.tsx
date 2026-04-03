@@ -75,14 +75,14 @@ export function RoomChat({
 
   return (
     <Panel className="flex min-h-[420px] flex-col gap-4">
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-        <div>
+      <div className="flex flex-col gap-2 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
             Realtime room
           </p>
-          <h3 className="section-title text-2xl font-bold">{roomName}</h3>
+          <h3 className="section-title truncate text-xl font-bold sm:text-2xl">{roomName}</h3>
         </div>
-        <span className="pill">
+        <span className="pill w-fit shrink-0">
           Socket: {connectionState}
         </span>
       </div>
@@ -115,7 +115,7 @@ export function RoomChat({
       </div>
 
       <form
-        className="flex gap-3"
+        className="flex flex-col gap-3 sm:flex-row sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           if (!draft.trim()) {
@@ -143,7 +143,7 @@ export function RoomChat({
         />
         <button
           type="submit"
-          className="primary-button self-end"
+          className="primary-button w-full shrink-0 sm:w-auto sm:self-end"
           disabled={sendMutation.isPending}
         >
           <Send className="h-4 w-4" />

@@ -65,7 +65,7 @@ function ChatWorkspace() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
               Your rooms
             </p>
-            <h2 className="section-title text-3xl font-bold">Switch context quickly</h2>
+            <h2 className="section-title text-2xl font-bold sm:text-3xl">Switch context quickly</h2>
           </div>
 
           <div className="space-y-3">
