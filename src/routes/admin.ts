@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { jsonSuccess } from '../lib/http';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { queueReindex } from '../services/content-service';
 import { createAdminContentSource, createBadgeDefinition, getAdminMetrics, reindexSkill } from '../services/admin-service';
 import type { AppBindings, AppVariables } from '../types';
 
@@ -52,6 +53,10 @@ app.post(
   zValidator('json', contentSourceSchema),
   async (c) => {
     const sourceId = await createAdminContentSource(c.env.DB, c.req.valid('json'));
+    await queueReindex(c.env, {
+      type: 'reindex_source',
+      sourceId,
+    });
     return jsonSuccess(c, { id: sourceId }, 201);
   },
 );

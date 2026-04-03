@@ -1,5 +1,5 @@
 import { firstRow, runStatement } from '../db/client';
-import { isoNow, randomId } from '../lib/crypto';
+import { randomId } from '../lib/crypto';
 import type { AppBindings } from '../types';
 import { queueReindex } from './content-service';
 
