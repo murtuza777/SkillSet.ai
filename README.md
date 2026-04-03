@@ -1,275 +1,262 @@
-# SkillSet.ai Backend
+# SkillSet.ai
 
-Cloudflare-native backend for SkillSet.ai built from [impl.md](./impl.md).
+SkillSet.ai is a Cloudflare-native collaborative learning platform. It combines structured learning-path generation, curated content discovery, peer matching, realtime chat, project rooms, and gamified progress tracking in one production-oriented stack.
+
+`impl.md` is the single source of truth for the implementation scope. This repo now aligns to that plan with:
+
+- a Cloudflare Worker API built with Hono
+- a Next.js App Router frontend prepared for Cloudflare with OpenNext
+- D1, KV, R2, Vectorize, Durable Objects, Queues, and Workers AI integrations
+- custom email/password auth plus guest sessions
+- GitHub Actions for CI and deployment
+
+## Features
+
+- Email/password authentication with refresh-token rotation
+- Temporary guest access backed by Workers + KV
+- Profile management and skill onboarding
+- Skill discovery and content discovery flows
+- AI-generated learning paths with modules, lessons, and tasks
+- Task submission and AI feedback
+- Peer matching with accept/reject and room creation
+- Realtime rooms and chat using Durable Objects + WebSockets
+- Project creation, joining, completion, and room chat
+- Points, badges, levels, and leaderboards
+- Admin metrics, content curation, badge creation, and reindex jobs
 
 ## Stack
 
-- Cloudflare Workers for the API runtime
-- Hono for routing
-- D1 for relational data
-- Durable Objects for realtime rooms and WebSocket coordination
-- Workers AI for learning-path generation, task generation, and embeddings
-- Vectorize for semantic search
-- KV for cache, rate limiting, and verification/session helpers
-- R2 for raw content payloads and attachments
-- Queues for content ingestion and gamification processing
+- Frontend: Next.js App Router, React Query, Zustand, OpenNext for Cloudflare
+- Backend: Hono on Cloudflare Workers
+- Database: Cloudflare D1
+- Cache and lightweight state: Cloudflare KV
+- File storage: Cloudflare R2
+- Embeddings and retrieval: Workers AI + Vectorize
+- Realtime: Durable Objects + WebSockets
+- Background jobs: Cloudflare Queues
+- CI/CD: GitHub Actions + Wrangler
 
-## Implemented Scope
-
-Phase 1:
-- JWT access token auth with refresh-token rotation
-- user profiles and user skills
-- curated content discovery
-- AI-generated learning paths
-- task submission and progress tracking
-- 1:1 and small-room chat with Durable Objects
-- basic points system
-
-Phase 2:
-- YouTube and docs connectors
-- queue-based ingestion pipeline
-- project rooms and collaboration spaces
-- peer matching
-- badges, levels, and leaderboards
-- admin content curation and reindex APIs
-
-## Folder Structure
+## Repository Layout
 
 ```text
 SkillSet.ai/
-+-- impl.md
-+-- schema.sql
-+-- seed.sql
-+-- wrangler.jsonc
-+-- .dev.vars.example
-+-- package.json
-+-- src/
-    +-- index.ts
-    +-- types.ts
-    +-- db/
-    |   +-- client.ts
-    +-- durable/
-    |   +-- room-hub.ts
-    +-- lib/
-    |   +-- auth.ts
-    |   +-- crypto.ts
-    |   +-- http.ts
-    |   +-- rate-limit.ts
-    |   +-- session.ts
-    +-- middleware/
-    |   +-- auth.ts
-    +-- routes/
-    |   +-- admin.ts
-    |   +-- auth.ts
-    |   +-- chat.ts
-    |   +-- content.ts
-    |   +-- gamification.ts
-    |   +-- learning.ts
-    |   +-- matching.ts
-    |   +-- projects.ts
-    |   +-- skills.ts
-    |   +-- users.ts
-    +-- services/
-        +-- admin-service.ts
-        +-- ai-service.ts
-        +-- auth-service.ts
-        +-- chat-service.ts
-        +-- content-service.ts
-        +-- gamification-service.ts
-        +-- learning-service.ts
-        +-- matching-service.ts
-        +-- project-service.ts
-        +-- skills-service.ts
-        +-- user-service.ts
+├─ apps/
+│  └─ web/                 # Next.js frontend for Cloudflare
+├─ src/                    # Hono Worker API
+├─ schema.sql              # D1 schema
+├─ seed.sql                # Seed data
+├─ wrangler.jsonc          # API worker config
+├─ impl.md                 # Source-of-truth implementation plan
+├─ README.md               # Contributor-facing project guide
+└─ uni.md                  # Final-year project documentation
 ```
 
-## Cloudflare Setup
+## Cloudflare Services
 
-### 1. Install dependencies
+The API worker expects these resources:
 
-```bash
-npm install
-```
+- `D1`: relational application data
+- `KV`: cache, rate limits, email verification, guest-session state
+- `R2`: raw content payloads and cache assets
+- `Vectorize`: content embeddings
+- `Queues`: content ingestion and gamification jobs
+- `Durable Objects`: realtime room coordination
+- `Workers AI`: generation and embeddings
 
-### 2. Authenticate Wrangler
+The frontend worker uses:
 
-```bash
-npx wrangler login
-```
+- OpenNext worker bundle
+- R2 incremental cache bucket
+- Cloudflare Images binding
 
-### 3. Create Cloudflare resources
+## Authentication Model
 
-Create D1:
+SkillSet.ai uses custom auth rather than Cloudflare Access or a third-party identity provider.
 
-```bash
-npx wrangler d1 create skillset-ai-db
-```
-
-Create KV:
-
-```bash
-npx wrangler kv namespace create CACHE
-npx wrangler kv namespace create CACHE --preview
-```
-
-Create R2 buckets:
-
-```bash
-npx wrangler r2 bucket create skillset-ai-content
-npx wrangler r2 bucket create skillset-ai-content-preview
-```
-
-Create queues:
-
-```bash
-npx wrangler queues create skillset-ai-content-jobs
-npx wrangler queues create skillset-ai-gamification-jobs
-```
-
-Create Vectorize index.
-This project uses `@cf/baai/bge-base-en-v1.5`, which produces 768-dimension embeddings, so the index must match that:
-
-```bash
-npx wrangler vectorize create skillset-ai-content-index --dimensions=768 --metric=cosine
-```
-
-Workers AI is bound directly in `wrangler.jsonc`, so you do not need an external AI API key.
-
-### 4. Update `wrangler.jsonc`
-
-Replace placeholder values in [wrangler.jsonc](./wrangler.jsonc):
-
-- `database_id` for the D1 database
-- KV namespace ids
-- bucket names if you changed them
-- Vectorize index name if you changed it
-
-### 5. Set secrets
-
-Required:
-
-```bash
-npx wrangler secret put JWT_SECRET
-```
-
-Optional:
-
-```bash
-npx wrangler secret put YOUTUBE_API_KEY
-```
-
-## D1 Setup
-
-Run the schema and seed files against your D1 database after updating `wrangler.jsonc`:
-
-```bash
-npx wrangler d1 execute skillset-ai-db --remote --file=schema.sql
-npx wrangler d1 execute skillset-ai-db --remote --file=seed.sql
-```
-
-If you want a disposable local database during development, you can also use:
-
-```bash
-npx wrangler d1 execute skillset-ai-db --local --file=schema.sql
-npx wrangler d1 execute skillset-ai-db --local --file=seed.sql
-```
-
-## Local Development
-
-Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and fill in local values:
-
-```bash
-Copy-Item .dev.vars.example .dev.vars
-```
-
-Then run:
-
-```bash
-npm run typecheck
-npm run dev
-```
-
-Note:
-- `npm run dev` now uses plain `wrangler dev`
-- this is important because the app uses a SQLite-backed Durable Object, which does not work correctly under `wrangler dev --remote`
-- your bindings stay connected to remote Cloudflare resources because they are marked with `"remote": true` in [wrangler.jsonc](./wrangler.jsonc)
-
-Current repo status:
-- the backend Worker is implemented and runnable
-- the old frontend scaffold files still exist, but the actual React app source is no longer present
-- that means there is not yet a second frontend dev server to start from this repo
-
-## Production Deployment
-
-Do not deploy until you are ready. When you are, deploy with:
-
-```bash
-npm run deploy
-```
-
-## Required Endpoints
-
-Auth:
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`
 - `POST /auth/verify-email`
+- `POST /auth/guest`
 
-Users:
-- `GET /users/me`
-- `PATCH /users/me`
-- `PUT /users/me/skills`
-- `GET /users/me/activity`
-- `GET /profiles/:id`
+Implementation details:
 
-Skills:
-- `GET /skills`
-- `GET /skills/search?q=`
-- `GET /skills/:slug`
+- access tokens are short-lived JWTs
+- refresh tokens are stored as hashed records in D1
+- verification tokens are stored in KV
+- guest users are persisted in D1 with temporary KV-backed guest-session state
+- the frontend uses same-origin Next.js API proxy routes so browser clients never need to store raw bearer tokens in local storage
 
-Content:
-- `POST /content/discover`
-- `GET /content/sources/:id`
-- `POST /content/reindex`
-- `GET /content/search?q=`
+## Local Development
 
-Learning:
-- `POST /learning-paths/generate`
-- `GET /learning-paths/:id`
-- `POST /learning-paths/:id/enroll`
-- `GET /modules/:id`
-- `POST /tasks/:id/submit`
+### 1. Install dependencies
 
-Projects:
-- `POST /projects`
-- `GET /projects/:id`
-- `POST /projects/:id/join`
-- `PATCH /projects/:id`
-- `GET /projects/:id/members`
+Backend:
 
-Matching:
-- `GET /matches/recommendations`
-- `POST /matches/:id/accept`
-- `POST /matches/:id/reject`
+```bash
+npm ci
+```
 
-Chat:
-- `GET /rooms`
-- `POST /rooms`
-- `GET /rooms/:id/messages`
-- `POST /rooms/:id/messages`
-- `POST /rooms/:id/join-token`
-- `GET /ws/rooms/:roomId`
+Frontend:
 
-Gamification:
-- `GET /gamification/me`
-- `GET /badges`
-- `GET /leaderboards`
-- `GET /leaderboards/:scope`
+```bash
+cd apps/web
+npm ci
+```
 
-Admin:
-- `GET /admin/metrics`
-- `POST /admin/content-sources`
-- `POST /admin/badges`
-- `POST /admin/reindex-skill`
+### 2. Configure local variables
+
+Backend `.dev.vars`:
+
+```bash
+Copy-Item .dev.vars.example .dev.vars
+```
+
+Required backend values:
+
+- `JWT_SECRET`
+- `YOUTUBE_API_KEY` is optional
+
+Frontend `.dev.vars`:
+
+```bash
+Copy-Item apps/web/.dev.vars.example apps/web/.dev.vars
+```
+
+Required frontend value:
+
+- `SKILLSET_API_BASE_URL=http://127.0.0.1:8787`
+
+### 3. Prepare the database
+
+Remote D1:
+
+```bash
+npx wrangler d1 execute skillset-ai-db --remote --file=schema.sql
+npx wrangler d1 execute skillset-ai-db --remote --file=seed.sql
+```
+
+Local D1:
+
+```bash
+npx wrangler d1 execute skillset-ai-db --local --file=schema.sql
+npx wrangler d1 execute skillset-ai-db --local --file=seed.sql
+```
+
+### 4. Run the services
+
+Backend API:
+
+```bash
+npm run dev
+```
+
+Frontend:
+
+```bash
+cd apps/web
+npm run dev
+```
+
+Open these URLs in development:
+
+- frontend: `http://localhost:3000`
+- backend: `http://127.0.0.1:8787`
+
+## Build and Validation
+
+Backend:
+
+```bash
+npm run lint
+npm run typecheck
+npx wrangler deploy --dry-run
+```
+
+Frontend:
+
+```bash
+cd apps/web
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Notes:
+
+- `npm run build:cloudflare` uses `opennextjs-cloudflare build`
+- OpenNext currently behaves best on Linux/WSL; plain `next build` is the reliable validation command on Windows
+
+## Deployment
+
+### API worker
+
+Deploy the backend with environment-specific runtime vars:
+
+```bash
+npx wrangler deploy --keep-vars \
+  --var APP_BASE_URL:https://YOUR_API_URL \
+  --var FRONTEND_ORIGIN:https://YOUR_WEB_URL
+```
+
+### Frontend worker
+
+Build the OpenNext bundle and deploy the worker:
+
+```bash
+cd apps/web
+npm run build:cloudflare
+npx wrangler deploy --keep-vars --var SKILLSET_API_BASE_URL:https://YOUR_API_URL
+```
+
+### Required one-time Cloudflare setup
+
+- create and bind D1, KV, R2, Vectorize, Queues, and Durable Objects for the API worker
+- create the frontend R2 cache bucket for OpenNext
+- set `JWT_SECRET` as a Wrangler secret on the API worker
+- optionally set `YOUTUBE_API_KEY`
+
+## CI/CD
+
+Two workflows are included:
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/deploy.yml`
+
+### CI workflow
+
+- installs backend and frontend dependencies
+- runs lint and typecheck on both apps
+- runs a backend dry-run bundle
+- runs a frontend production build
+
+### Deploy workflow
+
+- triggers automatically on push to `main`
+- deploys the API worker first
+- builds and deploys the frontend worker second
+
+### Required GitHub secrets
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `SKILLSET_API_BASE_URL`
+- `SKILLSET_WEB_BASE_URL`
+
+`SKILLSET_API_BASE_URL` and `SKILLSET_WEB_BASE_URL` are used to inject runtime URLs during deployment without hardcoding production domains into the repo.
+
+## Contributing
+
+1. Read `impl.md` before changing product behavior.
+2. Keep feature work aligned to the existing schema and route contracts.
+3. Run backend lint/typecheck and frontend lint/typecheck/build before opening a PR.
+4. Prefer changes that preserve Cloudflare-native architecture rather than introducing off-platform dependencies.
+5. Update `README.md` and `uni.md` whenever architecture, API surface, or deployment flow changes materially.
+
+## Open Source Notes
+
+- This repo is designed as a modular monolith on Cloudflare.
+- The frontend talks to the backend through Next.js proxy routes for secure cookie-based session handling.
+- If you are contributing from Windows, validate with `next build` locally and rely on Linux CI for the OpenNext adapter build.
