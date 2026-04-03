@@ -9,7 +9,7 @@ import { ProtectedPage } from "@/components/layout/protected-page";
 import { Panel } from "@/components/ui/panel";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { apiRequest, postJson } from "@/lib/api-client";
-import type { ContentDiscovery, LearningPath, Skill } from "@/types/domain";
+import type { ContentDiscovery, Skill } from "@/types/domain";
 
 export default function SkillsPage() {
   return (
@@ -89,35 +89,50 @@ function SkillsWorkspace({ userId }: { userId: string }) {
       }),
   });
 
-  const generateMutation = useMutation({
-    mutationFn: () =>
-      postJson<LearningPath>("/learning-paths/generate", {
-        skillId: selectedSkillId,
+  const createSkillMutation = useMutation({
+    mutationFn: (requestedTopic: string) =>
+      postJson<CreatedSkillResponse>("/skills/create", {
+        topic: requestedTopic,
+        userId,
         goalType,
         difficulty,
         preferredContentType: "mixed",
       }),
-    onSuccess: (path) => router.push(`/learning-paths/${path.id}`),
-  });
-
-  const createSkillMutation = useMutation({
-    mutationFn: () =>
-      postJson<CreatedSkillResponse>("/skills/create", {
-        topic,
-        userId,
-      }),
     onSuccess: (result) => {
       setCreatedSkill(result);
       setSelectedSkillId(result.skill.id);
+      setTopic(result.skill.topic);
     },
   });
+
+  const previewTitle = createdSkill?.skill.topic ?? selectedSkill?.name ?? "Select a skill";
+  const previewSources = createdSkill
+    ? [
+        ...createdSkill.sources.docs.map((doc, index) => ({
+          id: `doc-${index}`,
+          title: doc.title,
+          canonicalUrl: doc.url,
+          provider: doc.source,
+          sourceType: "doc",
+          qualityScore: 90,
+        })),
+        ...createdSkill.sources.videos.map((video) => ({
+          id: video.id,
+          title: video.title,
+          canonicalUrl: video.url,
+          provider: "youtube",
+          sourceType: "video",
+          qualityScore: 85,
+        })),
+      ]
+    : discoverMutation.data?.sources ?? [];
 
   return (
     <div className="space-y-6">
       <SectionHeading
         eyebrow="Skill explorer"
         title="Discover a skill, inspect the content, then generate your path."
-        description="Browse the skill catalog, preview available learning materials, and create a personalized learning path in seconds."
+        description="Choose an existing skill or type a new one, let the system fetch learning sources, build an AI path from basics to advanced, and open the peer chat room for collaborative learning."
       />
 
       <Panel className="space-y-4">
@@ -141,7 +156,7 @@ function SkillsWorkspace({ userId }: { userId: string }) {
             type="button"
             className="primary-button"
             disabled={!topic.trim() || createSkillMutation.isPending}
-            onClick={() => createSkillMutation.mutate()}
+            onClick={() => createSkillMutation.mutate(topic.trim())}
           >
             {createSkillMutation.isPending ? <span className="loading-spinner" /> : null}
             Create skill
@@ -160,6 +175,9 @@ function SkillsWorkspace({ userId }: { userId: string }) {
             <p className="font-semibold">
               Created: {createdSkill.skill.topic} ({createdSkill.modules.length} modules)
             </p>
+            <p className="text-sm text-[var(--muted)]">
+              The backend fetched learning sources, generated a guided AI path, and attached you to a squad room for peer collaboration.
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -173,7 +191,7 @@ function SkillsWorkspace({ userId }: { userId: string }) {
                 className="secondary-button"
                 onClick={() => router.push(`/chat?roomId=${createdSkill.squad.roomId}`)}
               >
-                Open squad chat
+                Start collaborative learning
               </button>
             </div>
           </div>
@@ -246,11 +264,11 @@ function SkillsWorkspace({ userId }: { userId: string }) {
             <button
               type="button"
               className="primary-button"
-              disabled={!selectedSkillId || generateMutation.isPending}
-              onClick={() => generateMutation.mutate()}
+              disabled={!selectedSkill || createSkillMutation.isPending}
+              onClick={() => createSkillMutation.mutate(selectedSkill?.name ?? "")}
             >
-              {generateMutation.isPending ? <span className="loading-spinner" /> : null}
-              Generate path
+              {createSkillMutation.isPending ? <span className="loading-spinner" /> : null}
+              Build AI learning path
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -259,9 +277,9 @@ function SkillsWorkspace({ userId }: { userId: string }) {
               Content discovery failed. Please try again.
             </div>
           ) : null}
-          {generateMutation.isError ? (
+          {createSkillMutation.isError ? (
             <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              Path generation failed. Please try again.
+              AI skill path creation failed. Please try again.
             </div>
           ) : null}
         </Panel>
@@ -272,13 +290,13 @@ function SkillsWorkspace({ userId }: { userId: string }) {
               Discovery preview
             </p>
             <h2 className="section-title text-3xl font-bold">
-              {selectedSkill?.name ?? "Select a skill"} content mix
+              {previewTitle} content mix
             </h2>
           </div>
 
-          {discoverMutation.data?.sources?.length ? (
+          {previewSources.length ? (
             <div className="space-y-3">
-              {discoverMutation.data.sources.map((source) => (
+              {previewSources.map((source) => (
                 <div
                   key={source.id}
                   className="rounded-[22px] border border-[var(--border)] bg-white/80 p-4"
@@ -311,7 +329,7 @@ function SkillsWorkspace({ userId }: { userId: string }) {
           {createdSkill?.modules?.length ? (
             <div className="space-y-3">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
-                Generated modules
+                AI generated modules
               </p>
               {createdSkill.modules.map((module, moduleIndex) => (
                 <div
@@ -322,6 +340,28 @@ function SkillsWorkspace({ userId }: { userId: string }) {
                   <p className="mt-1 text-sm text-[var(--muted)]">
                     {module.lessons.length} lessons
                   </p>
+                  <div className="mt-3 space-y-2">
+                    {module.lessons.map((lesson, lessonIndex) => (
+                      <div
+                        key={`${module.title}-${lesson.title}-${lessonIndex}`}
+                        className="rounded-[16px] border border-[var(--border)] bg-white/80 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-medium">{lesson.title}</p>
+                          <span className="pill">{lesson.xp} XP</span>
+                        </div>
+                        <p className="mt-2 text-sm text-[var(--muted)]">{lesson.task}</p>
+                        <a
+                          href={lesson.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="secondary-button mt-3"
+                        >
+                          Open {lesson.type === "video" ? "video" : "doc"}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

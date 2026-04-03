@@ -108,6 +108,33 @@ function LearningPathWorkspace({
         </Panel>
       </div>
 
+      {learningPath?.collaboration ? (
+        <Panel className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
+              Collaborative learning
+            </p>
+            <h2 className="section-title text-3xl font-bold">
+              Learn with peers in the {learningPath.collaboration.roomName}
+            </h2>
+            <p className="text-[var(--muted)]">
+              Ask questions, share progress, and coordinate study sessions while you work through this path.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/chat?roomId=${learningPath.collaboration.roomId}`}
+              className="primary-button"
+            >
+              Open squad chat
+            </Link>
+            <span className="pill">
+              Squad ID: {learningPath.collaboration.squadId.slice(0, 8)}
+            </span>
+          </div>
+        </Panel>
+      ) : null}
+
       <div className="space-y-4">
         {(learningPath?.modules ?? []).map((module) => (
           <Panel key={module.id} className="space-y-3">

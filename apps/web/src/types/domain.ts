@@ -112,6 +112,10 @@ export interface LearningLesson {
     sourceId: string;
     title: string;
     canonicalUrl: string;
+    url?: string;
+    task?: string | null;
+    xp?: number | null;
+    type?: "video" | "doc" | null;
   }>;
   sequenceNo: number;
 }
@@ -139,6 +143,7 @@ export interface LearningEnrollment {
 export interface LearningPath {
   id: string;
   skillId: string;
+  skillName?: string;
   title: string;
   description: string | null;
   difficulty: string | null;
@@ -148,6 +153,11 @@ export interface LearningPath {
   version: number;
   createdAt: string;
   enrollment: LearningEnrollment | null;
+  collaboration?: {
+    squadId: string;
+    roomId: string;
+    roomName: string;
+  } | null;
   modules: LearningModule[];
 }
 
