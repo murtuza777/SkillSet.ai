@@ -270,10 +270,15 @@ export const discoverContent = async (
       httpMetadata: { contentType: 'application/json' },
     });
 
-    await env.CONTENT_QUEUE.send({
-      type: 'ingest_source',
-      sourceId: contentSourceId,
-    });
+    if (env.CONTENT_QUEUE) {
+      await env.CONTENT_QUEUE.send({
+        type: 'ingest_source',
+        sourceId: contentSourceId,
+      });
+    } else {
+      // Fallback for environments without queue bindings.
+      await ingestSourceById(env, db, contentSourceId);
+    }
 
     persistedSources.push({
       id: contentSourceId,
@@ -596,5 +601,7 @@ export const semanticContentLookup = async (
 };
 
 export const queueReindex = async (env: AppBindings, payload: ContentQueueMessage) => {
-  await env.CONTENT_QUEUE.send(payload);
+  if (env.CONTENT_QUEUE) {
+    await env.CONTENT_QUEUE.send(payload);
+  }
 };

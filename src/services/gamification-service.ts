@@ -29,7 +29,9 @@ export const logActivity = async (
 };
 
 export const enqueueGamificationEvent = async (env: AppBindings, message: GamificationQueueMessage) => {
-  await env.GAMIFICATION_QUEUE.send(message);
+  if (env.GAMIFICATION_QUEUE) {
+    await env.GAMIFICATION_QUEUE.send(message);
+  }
 };
 
 const getDailyActivityStreak = async (db: D1Database, userId: string) => {

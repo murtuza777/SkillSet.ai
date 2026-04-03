@@ -23,14 +23,14 @@
     {
       "binding": "DB",
       "database_name": "skillset-ai-db",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "3be39715-bd46-4623-9aa0-f1a6f97a784f"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "00000000000000000000000000000000",
-      "preview_id": "00000000000000000000000000000000"
+      "id": "f6e12208448f4db7b1fb79e4786a7fab",
+      "preview_id": "01a35d9918d146ff96f44db27147fb99"
     }
   ],
   "r2_buckets": [
@@ -46,26 +46,6 @@
       "index_name": "skillset-ai-content-index"
     }
   ],
-  "queues": {
-    "producers": [
-      {
-        "binding": "CONTENT_QUEUE",
-        "queue": "skillset-ai-content-queue"
-      },
-      {
-        "binding": "GAMIFICATION_QUEUE",
-        "queue": "skillset-ai-gamification-queue"
-      }
-    ],
-    "consumers": [
-      {
-        "queue": "skillset-ai-content-queue"
-      },
-      {
-        "queue": "skillset-ai-gamification-queue"
-      }
-    ]
-  },
   "durable_objects": {
     "bindings": [
       {

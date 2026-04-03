@@ -40,9 +40,9 @@ export interface AppBindings {
   CACHE: KVNamespace;
   CONTENT_BUCKET: R2Bucket;
   CONTENT_INDEX: Vectorize;
-  CONTENT_QUEUE: Queue<ContentQueueMessage>;
+  CONTENT_QUEUE?: Queue<ContentQueueMessage>;
   DB: D1Database;
-  GAMIFICATION_QUEUE: Queue<GamificationQueueMessage>;
+  GAMIFICATION_QUEUE?: Queue<GamificationQueueMessage>;
   ROOM_HUB: DurableObjectNamespace;
   ACCESS_TOKEN_TTL_SECONDS: string;
   AI_EMBEDDING_MODEL: string;
