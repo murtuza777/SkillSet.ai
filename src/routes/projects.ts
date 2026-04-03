@@ -5,7 +5,14 @@ import { z } from 'zod';
 import { jsonError, jsonSuccess } from '../lib/http';
 import { requireCurrentUser } from '../lib/session';
 import { requireAuth } from '../middleware/auth';
-import { createProject, getProject, joinProject, listProjectMembers, updateProject } from '../services/project-service';
+import {
+  completeProject,
+  createProject,
+  getProject,
+  joinProject,
+  listProjectMembers,
+  updateProject,
+} from '../services/project-service';
 import type { AppBindings, AppVariables } from '../types';
 
 const app = new Hono<{
@@ -76,6 +83,7 @@ app.patch(
   zValidator('json', updateProjectSchema),
   async (c) => {
     const authUser = requireCurrentUser(c);
+    const payload = c.req.valid('json');
     const project = await getProject(c.env.DB, c.req.param('id'));
 
     if (!project) {
@@ -86,7 +94,12 @@ app.patch(
       return jsonError(c, 403, 'Only the project owner or an admin can update the project');
     }
 
-    const updated = await updateProject(c.env.DB, project.id, c.req.valid('json'));
+    const updated = await updateProject(c.env.DB, project.id, payload);
+
+    if (project.status !== 'completed' && payload.status === 'completed') {
+      await completeProject(c.env, c.env.DB, project.id, authUser.id);
+    }
+
     return jsonSuccess(c, updated);
   },
 );

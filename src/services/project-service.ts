@@ -1,5 +1,6 @@
 import { allRows, firstRow, runStatement } from '../db/client';
 import { isoNow, randomId } from '../lib/crypto';
+import type { AppBindings } from '../types';
 import { enqueueGamificationEvent, logActivity } from './gamification-service';
 
 export const createProject = async (
@@ -216,12 +217,18 @@ export const listProjectMembers = async (db: D1Database, projectId: string) =>
   );
 
 export const completeProject = async (
-  env: { GAMIFICATION_QUEUE: Queue<any> },
+  env: Pick<AppBindings, 'GAMIFICATION_QUEUE'>,
   db: D1Database,
   projectId: string,
   userId: string,
 ) => {
-  await runStatement(db, `UPDATE projects SET status = 'completed' WHERE id = ?`, [projectId]);
+  await logActivity(db, {
+    userId,
+    eventType: 'project_completed',
+    entityType: 'project',
+    entityId: projectId,
+  });
+
   await enqueueGamificationEvent(env as never, {
     type: 'project_completed',
     userId,
