@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import apiChatRoutes from './api/chat';
+import apiSkillsRoutes from './api/skills';
 import { RoomHub } from './durable/room-hub';
 import { jsonError, jsonSuccess } from './lib/http';
 import adminRoutes from './routes/admin';
@@ -66,10 +68,12 @@ app.get('/ws/rooms/:roomId', async (c) => {
 app.route('/auth', authRoutes);
 app.route('/users', usersRoutes);
 app.route('/skills', skillsRoutes);
+app.route('/api/skills', apiSkillsRoutes);
 app.route('/content', contentRoutes);
 app.route('/', learningRoutes);
 app.route('/projects', projectsRoutes);
 app.route('/matches', matchingRoutes);
+app.route('/api/chat', apiChatRoutes);
 app.route('/', chatRoutes);
 app.route('/', gamificationRoutes);
 app.route('/admin', adminRoutes);
