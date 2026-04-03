@@ -40,6 +40,67 @@ interface GeneratedModule {
   }>;
 }
 
+const normalizeLessonContentRefs = (value: string | null) =>
+  safeJsonParse<Array<Record<string, unknown>>>(value, []).map((entry, index) => ({
+    sourceId:
+      typeof entry.sourceId === 'string' && entry.sourceId
+        ? entry.sourceId
+        : `generated-${index + 1}`,
+    title: typeof entry.title === 'string' ? entry.title : 'Learning resource',
+    canonicalUrl:
+      typeof entry.canonicalUrl === 'string'
+        ? entry.canonicalUrl
+        : typeof entry.url === 'string'
+          ? entry.url
+          : '',
+    url:
+      typeof entry.url === 'string'
+        ? entry.url
+        : typeof entry.canonicalUrl === 'string'
+          ? entry.canonicalUrl
+          : '',
+    task: typeof entry.task === 'string' ? entry.task : null,
+    xp:
+      typeof entry.xp === 'number' && Number.isFinite(entry.xp)
+        ? Math.round(entry.xp)
+        : null,
+    type: entry.type === 'video' || entry.type === 'doc' ? entry.type : null,
+  }));
+
+const getLearningPathCollaboration = async (
+  db: D1Database,
+  payload: {
+    userId: string;
+    skillId: string;
+  },
+) => {
+  const squad = await firstRow<{
+    squad_id: string;
+    room_id: string;
+    room_name: string;
+  }>(
+    db,
+    `SELECT s.id AS squad_id, s.room_id, cr.name AS room_name
+     FROM squads s
+     JOIN squad_members sm ON sm.squad_id = s.id
+     JOIN chat_rooms cr ON cr.id = s.room_id
+     WHERE s.skill_id = ?
+       AND sm.user_id = ?
+     LIMIT 1`,
+    [payload.skillId, payload.userId],
+  );
+
+  if (!squad) {
+    return null;
+  }
+
+  return {
+    squadId: squad.squad_id,
+    roomId: squad.room_id,
+    roomName: squad.room_name,
+  };
+};
+
 const getSkillById = async (db: D1Database, skillId: string) =>
   firstRow<{ id: string; slug: string; name: string }>(
     db,
@@ -305,6 +366,7 @@ export const getLearningPathById = async (db: D1Database, userId: string, learni
   const path = await firstRow<{
     id: string;
     skill_id: string;
+    skill_name: string;
     title: string;
     description: string | null;
     difficulty: string | null;
@@ -315,9 +377,10 @@ export const getLearningPathById = async (db: D1Database, userId: string, learni
     created_at: string;
   }>(
     db,
-    `SELECT id, skill_id, title, description, difficulty, goal_type, estimated_hours, source_strategy, version, created_at
-     FROM learning_paths
-     WHERE id = ?
+    `SELECT lp.id, lp.skill_id, s.name AS skill_name, lp.title, lp.description, lp.difficulty, lp.goal_type, lp.estimated_hours, lp.source_strategy, lp.version, lp.created_at
+     FROM learning_paths lp
+     JOIN skills s ON s.id = lp.skill_id
+     WHERE lp.id = ?
      LIMIT 1`,
     [learningPathId],
   );
@@ -361,10 +424,15 @@ export const getLearningPathById = async (db: D1Database, userId: string, learni
 
   const moduleIds = modules.map((module) => module.id);
   const { lessonsByModule, tasksByModule } = await mapModuleTree(db, moduleIds);
+  const collaboration = await getLearningPathCollaboration(db, {
+    userId,
+    skillId: path.skill_id,
+  });
 
   return {
     id: path.id,
     skillId: path.skill_id,
+    skillName: path.skill_name,
     title: path.title,
     description: path.description,
     difficulty: path.difficulty,
@@ -383,6 +451,7 @@ export const getLearningPathById = async (db: D1Database, userId: string, learni
           currentModuleId: enrollment.current_module_id,
         }
       : null,
+    collaboration,
     modules: modules.map((module) => ({
       id: module.id,
       title: module.title,
@@ -395,7 +464,7 @@ export const getLearningPathById = async (db: D1Database, userId: string, learni
         title: lesson.title,
         lessonType: lesson.lesson_type,
         summary: lesson.summary,
-        contentRef: safeJsonParse(lesson.content_ref_json, []),
+        contentRef: normalizeLessonContentRefs(lesson.content_ref_json),
         sequenceNo: lesson.sequence_no,
       })),
       tasks: (tasksByModule.get(module.id) ?? []).map((task) => ({
@@ -682,7 +751,7 @@ export const getModuleById = async (db: D1Database, moduleId: string) => {
       title: lesson.title,
       lessonType: lesson.lesson_type,
       summary: lesson.summary,
-      contentRef: safeJsonParse(lesson.content_ref_json, []),
+      contentRef: normalizeLessonContentRefs(lesson.content_ref_json),
       sequenceNo: lesson.sequence_no,
     })),
     tasks: tasks.map((task) => ({

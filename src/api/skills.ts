@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 
 import { jsonError, jsonSuccess } from '../lib/http';
+import { requireCurrentUser } from '../lib/session';
+import { requireAuth } from '../middleware/auth';
 import {
   completeSkillLesson,
   createSkillForUser,
@@ -18,19 +20,27 @@ const app = new Hono<{
 
 const createSkillSchema = z.object({
   topic: z.string().min(2),
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
+  goalType: z.string().optional(),
+  difficulty: z.string().optional(),
+  preferredContentType: z.string().optional(),
 });
 
 const completeLessonSchema = z.object({
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
 });
 
-app.post('/create', zValidator('json', createSkillSchema), async (c) => {
+app.post('/create', requireAuth, zValidator('json', createSkillSchema), async (c) => {
+  const authUser = requireCurrentUser(c);
   const payload = c.req.valid('json');
+  const userId = payload.userId ?? authUser.id;
 
   const result = await createSkillForUser(c.env, c.env.DB, {
     topic: payload.topic,
-    userId: payload.userId,
+    userId,
+    goalType: payload.goalType,
+    difficulty: payload.difficulty,
+    preferredContentType: payload.preferredContentType,
   });
 
   if (!result) {
@@ -40,13 +50,10 @@ app.post('/create', zValidator('json', createSkillSchema), async (c) => {
   return jsonSuccess(c, result, 201);
 });
 
-app.get('/:skillId/progress', async (c) => {
-  const userId = c.req.query('userId');
+app.get('/:skillId/progress', requireAuth, async (c) => {
+  const authUser = requireCurrentUser(c);
+  const userId = c.req.query('userId') ?? authUser.id;
   const skillId = c.req.param('skillId');
-
-  if (!userId) {
-    return jsonError(c, 400, 'userId query parameter is required');
-  }
 
   const progress = await getUserSkillProgress(c.env.DB, userId, skillId);
   const xpLogs = await getUserSkillXpLogs(c.env.DB, userId, skillId);
@@ -57,11 +64,12 @@ app.get('/:skillId/progress', async (c) => {
   });
 });
 
-app.post('/lessons/:lessonId/complete', zValidator('json', completeLessonSchema), async (c) => {
+app.post('/lessons/:lessonId/complete', requireAuth, zValidator('json', completeLessonSchema), async (c) => {
+  const authUser = requireCurrentUser(c);
   const payload = c.req.valid('json');
   const lessonId = c.req.param('lessonId');
   const completion = await completeSkillLesson(c.env.DB, {
-    userId: payload.userId,
+    userId: payload.userId ?? authUser.id,
     lessonId,
   });
 

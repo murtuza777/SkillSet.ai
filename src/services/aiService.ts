@@ -136,6 +136,9 @@ export const generateStructuredLearningPath = async (
     topic: string;
     videos: YoutubeVideoResource[];
     docs: DocResource[];
+    goalType?: string;
+    difficulty?: string;
+    preferredContentType?: string;
     prompt?: string;
   },
 ): Promise<{ modules: LearningPathModule[] }> => {
@@ -157,6 +160,9 @@ export const generateStructuredLearningPath = async (
       {
         instruction: payload.prompt ?? DEFAULT_PROMPT,
         topic: payload.topic,
+        goalType: payload.goalType ?? 'skill mastery',
+        difficulty: payload.difficulty ?? 'beginner to advanced',
+        preferredContentType: payload.preferredContentType ?? 'mixed',
         videos: payload.videos.map((video) => ({
           title: video.title,
           url: video.url,

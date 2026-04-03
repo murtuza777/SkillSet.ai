@@ -180,9 +180,11 @@ const createLearningPathTree = async (
           lesson.task,
           JSON.stringify([
             {
+              sourceId: `${moduleId}:${lessonIndex + 1}`,
               type: lesson.type,
               title: lesson.title,
               url: lesson.url,
+              canonicalUrl: lesson.url,
               task: lesson.task,
               xp: lesson.xp,
             },
@@ -287,6 +289,9 @@ export const createSkillForUser = async (
   payload: {
     topic: string;
     userId: string;
+    goalType?: string;
+    difficulty?: string;
+    preferredContentType?: string;
   },
 ) => {
   const user = await findUserById(db, payload.userId);
@@ -304,6 +309,9 @@ export const createSkillForUser = async (
     topic,
     videos: youtube.videos,
     docs,
+    goalType: payload.goalType,
+    difficulty: payload.difficulty,
+    preferredContentType: payload.preferredContentType,
   });
 
   const { learningPathId } = await createLearningPathTree(db, {
