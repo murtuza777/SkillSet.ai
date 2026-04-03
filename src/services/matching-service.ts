@@ -147,14 +147,17 @@ export const getPeerRecommendations = async (db: D1Database, userId: string) => 
 
   await runStatement(db, `DELETE FROM peer_matches WHERE user_id = ? AND status = 'pending'`, [userId]);
 
+  const storedRecommendations = [];
+
   for (const recommendation of recommendations) {
+    const matchId = randomId();
     await runStatement(
       db,
       `INSERT INTO peer_matches
         (id, user_id, matched_user_id, score, status, reason_codes_json, created_at, expires_at)
        VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [
-        randomId(),
+        matchId,
         userId,
         recommendation.userId,
         recommendation.score,
@@ -163,9 +166,16 @@ export const getPeerRecommendations = async (db: D1Database, userId: string) => 
         addSeconds(7 * 24 * 60 * 60),
       ],
     );
+
+    storedRecommendations.push({
+      id: matchId,
+      ...recommendation,
+      status: 'pending',
+      suggestedRoomType: 'peer_room',
+    });
   }
 
-  return recommendations;
+  return storedRecommendations;
 };
 
 export const updatePeerMatchStatus = async (
@@ -235,7 +245,27 @@ export const updatePeerMatchStatus = async (
          VALUES (?, ?, ?, 'member', ?, NULL)`,
         [randomId(), roomId, match.matched_user_id, new Date().toISOString()],
       );
+
+      return {
+        id: match.id,
+        userId: match.user_id,
+        matchedUserId: match.matched_user_id,
+        score: match.score,
+        reasons: safeJsonParse(match.reason_codes_json, []),
+        status: payload.status,
+        roomId,
+      };
     }
+
+    return {
+      id: match.id,
+      userId: match.user_id,
+      matchedUserId: match.matched_user_id,
+      score: match.score,
+      reasons: safeJsonParse(match.reason_codes_json, []),
+      status: payload.status,
+      roomId: existingRoom.room_id,
+    };
   }
 
   return {
@@ -245,5 +275,6 @@ export const updatePeerMatchStatus = async (
     score: match.score,
     reasons: safeJsonParse(match.reason_codes_json, []),
     status: payload.status,
+    roomId: null,
   };
 };
