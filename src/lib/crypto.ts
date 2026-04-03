@@ -1,6 +1,12 @@
-import { argon2Verify, argon2id } from 'hash-wasm';
+import { argon2Verify, argon2id, setWASMModules } from 'argon2-wasm-edge';
+// @ts-expect-error Cloudflare bundles imported Wasm modules for Workers.
+import argon2WASM from 'argon2-wasm-edge/wasm/argon2.wasm';
+// @ts-expect-error Cloudflare bundles imported Wasm modules for Workers.
+import blake2bWASM from 'argon2-wasm-edge/wasm/blake2b.wasm';
 
 const textEncoder = new TextEncoder();
+
+setWASMModules({ argon2WASM, blake2bWASM });
 
 const toBase64 = (bytes: Uint8Array) => {
   let output = '';
@@ -34,7 +40,7 @@ export const hashPassword = async (password: string) => {
 
   return argon2id({
     password,
-    salt: toBase64(saltBytes),
+    salt: saltBytes,
     parallelism: 1,
     iterations: 3,
     memorySize: 19456,
