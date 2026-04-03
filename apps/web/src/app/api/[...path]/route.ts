@@ -5,7 +5,19 @@ import { proxyToBackend } from "@/lib/server/backend-proxy";
 export const dynamic = "force-dynamic";
 
 const createPath = (request: NextRequest, path: string[] | undefined) => {
-  const pathname = `/${(path ?? []).join("/")}`;
+  const segments = path ?? [];
+  const isSkillsFeatureRoute =
+    segments[0] === "skills" &&
+    (segments[1] === "create" ||
+      segments[1] === "lessons" ||
+      (segments.length >= 3 && segments[2] === "progress"));
+  const isSquadChatRoute =
+    segments[0] === "chat" &&
+    (segments[1] === "send" || segments[1] === "messages" || segments[1] === "ws");
+
+  const pathname = isSkillsFeatureRoute || isSquadChatRoute
+    ? `/api/${segments.join("/")}`
+    : `/${segments.join("/")}`;
   return `${pathname}${request.nextUrl.search}`;
 };
 
