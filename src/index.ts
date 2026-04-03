@@ -22,11 +22,29 @@ const app = new Hono<{
   Variables: AppVariables;
 }>();
 
+const getAllowedOrigins = (env: AppBindings) =>
+  (env.FRONTEND_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 app.use(
   '*',
   cors({
-    origin: (origin) => origin || '*',
-    allowHeaders: ['Authorization', 'Content-Type'],
+    origin: (origin, c) => {
+      const allowedOrigins = getAllowedOrigins(c.env);
+
+      if (!origin) {
+        return allowedOrigins[0] ?? '*';
+      }
+
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return origin;
+      }
+
+      return null;
+    },
+    allowHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
     credentials: true,
   }),

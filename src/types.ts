@@ -49,6 +49,7 @@ export interface AppBindings {
   AI_TEXT_MODEL: string;
   APP_BASE_URL: string;
   AUTH_RATE_LIMIT_MAX_REQUESTS: string;
+  FRONTEND_ORIGIN?: string;
   JWT_SECRET: string;
   RATE_LIMIT_MAX_REQUESTS: string;
   RATE_LIMIT_WINDOW_SECONDS: string;
