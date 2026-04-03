@@ -11,9 +11,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useMemo } from "react";
 
 import { postJson } from "@/lib/api-client";
-import { primaryNavigation } from "@/lib/navigation";
+import { adminNavigation, primaryNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { useSessionQuery } from "@/hooks/use-session";
 import { useUiStore } from "@/stores/ui-store";
@@ -39,6 +40,16 @@ export function SiteShell({
     },
   });
 
+  const isAdmin = session.data?.user?.role === "admin";
+
+  const navItems = useMemo(() => {
+    const items = [...primaryNavigation];
+    if (isAdmin) {
+      return [...items, ...adminNavigation];
+    }
+    return items;
+  }, [isAdmin]);
+
   const isPublicLanding = pathname === "/";
 
   return (
@@ -56,7 +67,7 @@ export function SiteShell({
           </Link>
 
           <nav className="hidden items-center gap-2 lg:flex">
-            {primaryNavigation.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -109,7 +120,7 @@ export function SiteShell({
         {mobileMenuOpen ? (
           <div className="border-t border-[var(--border)] bg-[rgba(255,249,240,0.98)] px-4 py-4 lg:hidden">
             <div className="flex flex-col gap-2">
-              {primaryNavigation.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

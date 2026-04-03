@@ -56,7 +56,7 @@ function ChatWorkspace() {
       <SectionHeading
         eyebrow="Chat"
         title="Rooms, messages, and realtime collaboration."
-        description="Use this view for peer rooms, project spaces, and the broader collaboration loop."
+        description="Chat with your peers, collaborate in project rooms, and stay connected in real time."
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">

@@ -43,7 +43,7 @@ function LeaderboardWorkspace() {
       <SectionHeading
         eyebrow="Leaderboard"
         title="See how consistent learning stacks up."
-        description="Leaderboards are backed by the point ledger and can scope globally or per skill."
+        description="Compare your progress with other learners — filter by global ranking or by specific skill."
       />
 
       <Panel className="space-y-5">
@@ -93,7 +93,7 @@ function LeaderboardWorkspace() {
                   <p className="font-semibold">
                     #{entry.rank} {entry.displayName}
                   </p>
-                  <p className="text-sm text-[var(--muted)]">{entry.userId}</p>
+                  <p className="text-sm text-[var(--muted)]">{entry.totalPoints} points earned</p>
                 </div>
               </div>
               <span className="pill bg-[var(--brand-soft)] text-[var(--brand)]">

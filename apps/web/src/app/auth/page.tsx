@@ -14,6 +14,7 @@ type AuthMode = "login" | "register" | "verify";
 
 interface RegisterResponse {
   user: SessionUser;
+  accessToken: string;
   verificationToken: string;
 }
 
@@ -45,14 +46,15 @@ export default function AuthPage() {
         setVerificationToken(typed.verificationToken);
         setVerifyForm({ email: typed.user.email, token: typed.verificationToken });
         setMessage(
-          "Account created. A verification token has been generated so you can complete email verification from the UI.",
+          "Account created! You're now logged in. You can verify your email anytime from settings.",
         );
-        setMode("verify");
+        await queryClient.invalidateQueries({ queryKey: ["session"] });
+        router.push("/dashboard");
         return;
       }
 
       if (variables.path === "/auth/verify-email") {
-        setMessage("Email verified. You can log in now.");
+        setMessage("Email verified successfully! You can now log in.");
         setMode("login");
         return;
       }
@@ -61,7 +63,7 @@ export default function AuthPage() {
       router.push("/dashboard");
     },
     onError: (error) => {
-      setMessage(error instanceof ApiError ? error.message : "Unable to continue.");
+      setMessage(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
     },
   });
 
@@ -79,9 +81,9 @@ export default function AuthPage() {
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <Panel className="hero-mesh space-y-6">
         <SectionHeading
-          eyebrow="Authentication"
-          title="Enter the workspace on your terms."
-          description="Use email/password for a persistent account or continue as a guest for a temporary session backed by the Cloudflare Worker auth flow."
+          eyebrow="Welcome"
+          title="Start learning on your terms."
+          description="Create an account to save your progress, or jump in as a guest to explore everything instantly."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-5">
@@ -89,11 +91,11 @@ export default function AuthPage() {
               <div className="rounded-2xl bg-[var(--brand-soft)] p-3 text-[var(--brand)]">
                 <MailCheck className="h-5 w-5" />
               </div>
-              <h3 className="font-semibold">Verified accounts</h3>
+              <h3 className="font-semibold">Full account</h3>
             </div>
             <p className="mt-3 text-[var(--muted)]">
-              Register with email, verify through the Worker API, and keep your
-              paths, projects, badges, and matching history over time.
+              Register with email to keep your learning paths, projects,
+              badges, and connections across sessions.
             </p>
           </div>
           <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-5">
@@ -101,11 +103,11 @@ export default function AuthPage() {
               <div className="rounded-2xl bg-[var(--accent-soft)] p-3 text-[var(--accent)]">
                 <Rocket className="h-5 w-5" />
               </div>
-              <h3 className="font-semibold">Guest sessions</h3>
+              <h3 className="font-semibold">Guest access</h3>
             </div>
             <p className="mt-3 text-[var(--muted)]">
-              Continue as a guest to explore onboarding, learning paths, rooms,
-              and the dashboard without creating a full account yet.
+              Explore learning paths, rooms, and the dashboard
+              without creating an account — upgrade anytime.
             </p>
           </div>
         </div>
@@ -150,31 +152,38 @@ export default function AuthPage() {
               authMutation.mutate({ path: "/auth/login", body: loginForm });
             }}
           >
-            <input
-              className="field"
-              placeholder="Email"
-              type="email"
-              value={loginForm.email}
-              onChange={(event) =>
-                setLoginForm((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
-            />
-            <input
-              className="field"
-              placeholder="Password"
-              type="password"
-              value={loginForm.password}
-              onChange={(event) =>
-                setLoginForm((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
-              }
-            />
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Email</label>
+              <input
+                className="field"
+                placeholder="you@example.com"
+                type="email"
+                value={loginForm.email}
+                onChange={(event) =>
+                  setLoginForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Password</label>
+              <input
+                className="field"
+                placeholder="••••••••"
+                type="password"
+                value={loginForm.password}
+                onChange={(event) =>
+                  setLoginForm((current) => ({
+                    ...current,
+                    password: event.target.value,
+                  }))
+                }
+              />
+            </div>
             <button type="submit" className="primary-button w-full" disabled={authMutation.isPending}>
+              {authMutation.isPending ? <span className="loading-spinner" /> : null}
               Login
               <ArrowRight className="h-4 w-4" />
             </button>
@@ -189,71 +198,87 @@ export default function AuthPage() {
               authMutation.mutate({ path: "/auth/register", body: registerForm });
             }}
           >
-            <input
-              className="field"
-              placeholder="Display name"
-              value={registerForm.displayName}
-              onChange={(event) =>
-                setRegisterForm((current) => ({
-                  ...current,
-                  displayName: event.target.value,
-                }))
-              }
-            />
-            <input
-              className="field"
-              placeholder="Email"
-              type="email"
-              value={registerForm.email}
-              onChange={(event) =>
-                setRegisterForm((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
-            />
-            <input
-              className="field"
-              placeholder="Password"
-              type="password"
-              value={registerForm.password}
-              onChange={(event) =>
-                setRegisterForm((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
-              }
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <select
-                className="field"
-                value={registerForm.experienceLevel}
-                onChange={(event) =>
-                  setRegisterForm((current) => ({
-                    ...current,
-                    experienceLevel: event.target.value,
-                  }))
-                }
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Display name</label>
               <input
                 className="field"
-                min={1}
-                max={80}
-                type="number"
-                value={registerForm.weeklyHours}
+                placeholder="Your name"
+                value={registerForm.displayName}
                 onChange={(event) =>
                   setRegisterForm((current) => ({
                     ...current,
-                    weeklyHours: Number(event.target.value),
+                    displayName: event.target.value,
                   }))
                 }
               />
             </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Email</label>
+              <input
+                className="field"
+                placeholder="you@example.com"
+                type="email"
+                value={registerForm.email}
+                onChange={(event) =>
+                  setRegisterForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Password</label>
+              <input
+                className="field"
+                placeholder="At least 8 characters"
+                type="password"
+                value={registerForm.password}
+                onChange={(event) =>
+                  setRegisterForm((current) => ({
+                    ...current,
+                    password: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-[var(--muted)]">Experience level</label>
+                <select
+                  className="field"
+                  value={registerForm.experienceLevel}
+                  onChange={(event) =>
+                    setRegisterForm((current) => ({
+                      ...current,
+                      experienceLevel: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-[var(--muted)]">Hours per week</label>
+                <input
+                  className="field"
+                  min={1}
+                  max={80}
+                  type="number"
+                  value={registerForm.weeklyHours}
+                  onChange={(event) =>
+                    setRegisterForm((current) => ({
+                      ...current,
+                      weeklyHours: Number(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+            </div>
             <button type="submit" className="primary-button w-full" disabled={authMutation.isPending}>
+              {authMutation.isPending ? <span className="loading-spinner" /> : null}
               Create account
               <ArrowRight className="h-4 w-4" />
             </button>
@@ -268,35 +293,42 @@ export default function AuthPage() {
               authMutation.mutate({ path: "/auth/verify-email", body: verifyForm });
             }}
           >
-            <input
-              className="field"
-              placeholder="Email"
-              type="email"
-              value={verifyForm.email}
-              onChange={(event) =>
-                setVerifyForm((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
-            />
-            <input
-              className="field"
-              placeholder="Verification token"
-              value={verifyForm.token}
-              onChange={(event) =>
-                setVerifyForm((current) => ({
-                  ...current,
-                  token: event.target.value,
-                }))
-              }
-            />
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Email</label>
+              <input
+                className="field"
+                placeholder="you@example.com"
+                type="email"
+                value={verifyForm.email}
+                onChange={(event) =>
+                  setVerifyForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[var(--muted)]">Verification token</label>
+              <input
+                className="field"
+                placeholder="Paste the token from your email"
+                value={verifyForm.token}
+                onChange={(event) =>
+                  setVerifyForm((current) => ({
+                    ...current,
+                    token: event.target.value,
+                  }))
+                }
+              />
+            </div>
             {verificationToken ? (
               <p className="text-sm text-[var(--muted)]">
-                Latest generated token: <span className="font-semibold">{verificationToken}</span>
+                Your verification token: <span className="font-semibold">{verificationToken}</span>
               </p>
             ) : null}
             <button type="submit" className="primary-button w-full" disabled={authMutation.isPending}>
+              {authMutation.isPending ? <span className="loading-spinner" /> : null}
               Verify email
               <ArrowRight className="h-4 w-4" />
             </button>

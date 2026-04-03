@@ -76,7 +76,7 @@ function AdminWorkspace() {
       <SectionHeading
         eyebrow="Admin"
         title="Curate sources, badges, and system health."
-        description="These controls map directly to the Cloudflare Worker admin APIs from impl.md."
+        description="Manage content sources, create badge definitions, trigger skill re-indexing, and monitor platform metrics."
       />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">

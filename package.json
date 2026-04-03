@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix apps/web\""
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260402.1",
     "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
     "typescript": "^6.0.2",

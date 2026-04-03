@@ -86,10 +86,23 @@ app.post(
 
     const verificationToken = await createEmailVerificationToken(c.env, user.id, user.email);
 
+    const authUser = mapUserRowToAuthUser(user);
+    const accessToken = await signAccessToken(c.env, authUser);
+    const refreshTtl = Number.parseInt(c.env.REFRESH_TOKEN_TTL_SECONDS, 10) || 2592000;
+    const refreshSession = await createRefreshSession(c.env.DB, {
+      userId: user.id,
+      ttlSeconds: refreshTtl,
+      ipAddress: c.req.header('CF-Connecting-IP') ?? null,
+      userAgent: c.req.header('user-agent') ?? null,
+    });
+
+    setRefreshCookie(c, refreshSession.plainToken, refreshTtl);
+
     return jsonSuccess(
       c,
       {
-        user: mapUserRowToAuthUser(user),
+        accessToken,
+        user: authUser,
         verificationToken,
       },
       201,

@@ -58,8 +58,8 @@ export default function SkillsPage() {
         <div className="space-y-6">
           <SectionHeading
             eyebrow="Skill explorer"
-            title="Discover a skill, inspect the content mix, then generate the path."
-            description="This page ties together the skill taxonomy, content discovery, and Workers AI learning-path generation flow from impl.md."
+            title="Discover a skill, inspect the content, then generate your path."
+            description="Browse the skill catalog, preview available learning materials, and create a personalized learning path in seconds."
           />
 
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -122,6 +122,7 @@ export default function SkillsPage() {
                   disabled={!selectedSkillId || discoverMutation.isPending}
                   onClick={() => discoverMutation.mutate()}
                 >
+                  {discoverMutation.isPending ? <span className="loading-spinner" /> : null}
                   Discover content
                 </button>
                 <button
@@ -130,10 +131,21 @@ export default function SkillsPage() {
                   disabled={!selectedSkillId || generateMutation.isPending}
                   onClick={() => generateMutation.mutate()}
                 >
+                  {generateMutation.isPending ? <span className="loading-spinner" /> : null}
                   Generate path
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
+              {discoverMutation.isError ? (
+                <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  Content discovery failed. Please try again.
+                </div>
+              ) : null}
+              {generateMutation.isError ? (
+                <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  Path generation failed. Please try again.
+                </div>
+              ) : null}
             </Panel>
 
             <Panel className="space-y-5">

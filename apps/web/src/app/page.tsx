@@ -17,35 +17,35 @@ import { SectionHeading } from "@/components/ui/section-heading";
 const features = [
   {
     icon: SearchCheck,
-    title: "Content discovery grounded in real sources",
+    title: "Learn from the best sources",
     description:
-      "SkillSet.ai combines curated docs, YouTube discovery, embeddings, and search to build paths from actual learning material.",
+      "SkillSet.ai curates docs, videos, and tutorials from across the web so you always learn from high-quality, relevant material.",
   },
   {
     icon: BrainCircuit,
-    title: "Workers AI learning-path generation",
+    title: "AI-personalized learning paths",
     description:
-      "Generate structured modules, lessons, and tasks that adapt to skill, goal, pace, and current level.",
+      "Get structured modules, lessons, and hands-on tasks tailored to your skill level, goals, and available time.",
   },
   {
     icon: Users2,
-    title: "Peer matching and collaborative rooms",
+    title: "Find your learning partners",
     description:
-      "Find aligned learners, spin up shared rooms, and move naturally from solo study into project collaboration.",
+      "Get matched with peers who share your interests, then collaborate in shared rooms and build projects together.",
   },
   {
     icon: Trophy,
-    title: "Progress that feels motivating",
+    title: "Stay motivated with real progress",
     description:
-      "Track points, badges, streaks, leaderboards, and project completions without losing sight of actual skill growth.",
+      "Track points, earn badges, maintain streaks, and climb leaderboards — all while building real skills.",
   },
 ];
 
 const highlights = [
-  "Cloudflare Workers API with Hono",
-  "D1, KV, R2, Vectorize, Durable Objects, Queues",
-  "Next.js App Router frontend on Cloudflare",
-  "Guest sessions plus email/password auth",
+  "AI-powered learning paths",
+  "Real-time collaboration rooms",
+  "Smart peer matching",
+  "Guest-friendly — no signup required",
 ];
 
 export default function Home() {
@@ -56,21 +56,21 @@ export default function Home() {
           <div className="space-y-7">
             <span className="pill bg-[var(--brand-soft)] text-[var(--brand)]">
               <Sparkles className="h-4 w-4" />
-              Cloudflare-native collaborative learning
+              AI-powered collaborative learning
             </span>
             <div className="space-y-4">
               <h1 className="section-title max-w-4xl text-5xl font-bold leading-[0.94] tracking-[-0.06em] sm:text-6xl">
                 Learn a skill, meet the right peers, and ship projects with momentum.
               </h1>
               <p className="max-w-2xl text-xl text-[var(--muted)]">
-                SkillSet.ai brings together AI-generated learning paths, semantic
+                SkillSet.ai combines AI-personalized learning paths, smart
                 content discovery, project rooms, peer matching, and gamified
-                progress in one Cloudflare-native stack.
+                progress — all in one platform.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link href="/auth" className="primary-button">
-                Launch your workspace
+                Get started free
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/skills" className="secondary-button">
@@ -93,31 +93,31 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  What the stack unlocks
+                  How it works
                 </p>
                 <h2 className="section-title text-2xl font-bold">
-                  One system, multiple learning loops
+                  One platform, multiple learning loops
                 </h2>
               </div>
             </div>
 
             <div className="grid gap-4">
               <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Path generation</p>
+                <p className="text-sm font-semibold text-[var(--brand)]">Personalized paths</p>
                 <p className="mt-2 text-[var(--muted)]">
-                  Turn a skill goal into modules, lessons, and tasks using Workers AI plus Vectorize-backed source retrieval.
+                  Tell us your goal and we&apos;ll generate a structured learning path with modules, lessons, and tasks pulled from the best sources.
                 </p>
               </div>
               <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
                 <p className="text-sm font-semibold text-[var(--brand)]">Realtime collaboration</p>
                 <p className="mt-2 text-[var(--muted)]">
-                  Use Durable Objects for room coordination, chat, presence, and project momentum without leaving the platform.
+                  Join project rooms, chat with learning partners, and build together in real time without leaving the platform.
                 </p>
               </div>
               <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Motivation loop</p>
+                <p className="text-sm font-semibold text-[var(--brand)]">Motivation that works</p>
                 <p className="mt-2 text-[var(--muted)]">
-                  Track points, badges, and level progression so learners always see what meaningful progress looks like.
+                  Earn points, unlock badges, and track your level progression so you always see how far you&apos;ve come.
                 </p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export default function Home() {
         <SectionHeading
           eyebrow="Built for the full loop"
           title="From first skill pick to project room"
-          description="The MVP flows in this repo cover the entire cycle: onboarding, content discovery, path generation, task submission, matching, chat, and admin curation."
+          description="SkillSet.ai covers the entire journey: onboarding, content discovery, path generation, task submission, peer matching, chat, and community leaderboards."
         />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
           {features.map((feature) => {
@@ -156,28 +156,28 @@ export default function Home() {
             <p className="font-semibold">Chat-first collaboration</p>
           </div>
           <p className="text-[var(--muted)]">
-            Jump into project rooms or matched peer rooms with realtime presence
-            and WebSocket-backed message delivery.
+            Jump into project rooms or matched peer rooms with real-time
+            presence and instant message delivery.
           </p>
         </Panel>
         <Panel className="space-y-4">
           <div className="flex items-center gap-3">
             <Rocket className="h-5 w-5 text-[var(--brand)]" />
-            <p className="font-semibold">Production-minded deployment</p>
+            <p className="font-semibold">Built for speed</p>
           </div>
           <p className="text-[var(--muted)]">
-            API and frontend are ready for Cloudflare deployment with OpenNext,
-            Wrangler, D1, KV, R2, Vectorize, and GitHub Actions.
+            The platform is optimized for fast load times and
+            instant interactions so your learning flow is never interrupted.
           </p>
         </Panel>
         <Panel className="space-y-4">
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-[var(--brand)]" />
-            <p className="font-semibold">Guest-friendly onboarding</p>
+            <p className="font-semibold">Try it instantly</p>
           </div>
           <p className="text-[var(--muted)]">
-            Prospective learners can continue as guests before committing to an
-            email account, so the first session has almost zero friction.
+            Continue as a guest to explore learning paths, rooms,
+            and the dashboard without creating an account — zero friction.
           </p>
         </Panel>
       </section>

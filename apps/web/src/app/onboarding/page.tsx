@@ -117,8 +117,8 @@ function OnboardingWorkspace({
     <div className="space-y-6">
       <SectionHeading
         eyebrow="Onboarding"
-        title="Shape the learning context before we generate anything."
-        description="Your profile, available time, and current vs. target skills drive matching, learning-path generation, and content retrieval."
+        title="Tell us about yourself and what you want to learn."
+        description="Your profile details and skill selections help us personalize your learning paths and find the best peer matches."
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -379,9 +379,14 @@ function OnboardingWorkspace({
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            <CheckCircle2 className="h-4 w-4" />
+            {saveMutation.isPending ? <span className="loading-spinner" /> : <CheckCircle2 className="h-4 w-4" />}
             Save onboarding and continue
           </button>
+          {saveMutation.isError ? (
+            <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Failed to save. Please try again.
+            </div>
+          ) : null}
         </Panel>
       </div>
     </div>
