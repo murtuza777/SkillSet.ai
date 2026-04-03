@@ -23,7 +23,8 @@
     {
       "binding": "DB",
       "database_name": "skillset-ai-db",
-      "database_id": "3be39715-bd46-4623-9aa0-f1a6f97a784f"
+      "database_id": "3be39715-bd46-4623-9aa0-f1a6f97a784f",
+      "migrations_dir": "d1/migrations"
     }
   ],
   "kv_namespaces": [
