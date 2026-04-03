@@ -32,6 +32,40 @@ export const enqueueGamificationEvent = async (env: AppBindings, message: Gamifi
   await env.GAMIFICATION_QUEUE.send(message);
 };
 
+const getDailyActivityStreak = async (db: D1Database, userId: string) => {
+  const rows = await allRows<{ activity_day: string }>(
+    db,
+    `SELECT DISTINCT substr(created_at, 1, 10) AS activity_day
+     FROM activity_logs
+     WHERE user_id = ?
+     ORDER BY activity_day ASC`,
+    [userId],
+  );
+
+  let longestStreak = 0;
+  let currentStreak = 0;
+  let previousDay: number | null = null;
+
+  for (const row of rows) {
+    const dayValue = Date.parse(`${row.activity_day}T00:00:00.000Z`);
+
+    if (!Number.isFinite(dayValue)) {
+      continue;
+    }
+
+    if (previousDay === null || dayValue - previousDay === 24 * 60 * 60 * 1000) {
+      currentStreak += 1;
+    } else {
+      currentStreak = 1;
+    }
+
+    previousDay = dayValue;
+    longestStreak = Math.max(longestStreak, currentStreak);
+  }
+
+  return longestStreak;
+};
+
 const awardPoints = async (
   db: D1Database,
   payload: {
@@ -81,16 +115,19 @@ const evaluateBadges = async (db: D1Database, userId: string) => {
       continue;
     }
 
-    const counts = await firstRow<{ total: number }>(
-      db,
-      `SELECT COUNT(*) AS total
-       FROM activity_logs
-       WHERE user_id = ?
-         AND event_type = ?`,
-      [userId, rule.event],
-    );
+    const total =
+      rule.event === 'daily_streak'
+        ? await getDailyActivityStreak(db, userId)
+        : (await firstRow<{ total: number }>(
+            db,
+            `SELECT COUNT(*) AS total
+             FROM activity_logs
+             WHERE user_id = ?
+               AND event_type = ?`,
+            [userId, rule.event],
+          ))?.total ?? 0;
 
-    if ((counts?.total ?? 0) < requiredCount) {
+    if (total < requiredCount) {
       continue;
     }
 
@@ -246,6 +283,35 @@ export const getLeaderboard = async (
 ) => {
   const scopeType = payload.scopeType ?? 'global';
   const periodType = payload.periodType ?? 'all_time';
+  const scopedUsersJoin =
+    scopeType === 'skill' && payload.scopeId
+      ? `JOIN (
+           SELECT DISTINCT user_id
+           FROM user_skills
+           WHERE skill_id = ?
+         ) scoped_users ON scoped_users.user_id = pl.user_id`
+      : scopeType === 'cohort' && payload.scopeId
+        ? `JOIN (
+             SELECT DISTINCT crm.user_id
+             FROM chat_room_members crm
+             JOIN chat_rooms cr ON cr.id = crm.room_id
+             WHERE cr.id = ?
+               AND cr.room_type = 'cohort_room'
+           ) scoped_users ON scoped_users.user_id = pl.user_id`
+        : '';
+  const params: string[] = [];
+  const periodFilters: string[] = [];
+
+  if (payload.scopeId && scopeType !== 'global') {
+    params.push(payload.scopeId);
+  }
+
+  if (periodType === 'weekly') {
+    periodFilters.push('pl.created_at >= ?');
+    params.push(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  }
+
+  const whereClause = periodFilters.length > 0 ? `WHERE ${periodFilters.join(' AND ')}` : '';
 
   const rankingRows = await allRows<{
     user_id: string;
@@ -260,10 +326,13 @@ export const getLeaderboard = async (
        p.avatar_url,
        COALESCE(SUM(pl.points_delta), 0) AS total_points
      FROM point_ledger pl
+     ${scopedUsersJoin}
      JOIN profiles p ON p.user_id = pl.user_id
+     ${whereClause}
      GROUP BY pl.user_id, p.display_name, p.avatar_url
      ORDER BY total_points DESC, p.display_name ASC
      LIMIT 50`,
+    params,
   );
 
   const rankings = rankingRows.map((row, index) => ({
