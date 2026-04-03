@@ -23,9 +23,10 @@ export function RoomChat({
   const { send } = useRoomSocket(roomId);
   const setActiveRoomId = useChatStore((state) => state.setActiveRoomId);
   const setRoomMessages = useChatStore((state) => state.setRoomMessages);
-  const messages = useChatStore(
-    (state) => (roomId ? state.messagesByRoom[roomId] : []) ?? [],
+  const roomMessages = useChatStore((state) =>
+    roomId ? state.messagesByRoom[roomId] : undefined,
   );
+  const messages = roomMessages ?? [];
   const connectionState = useChatStore((state) => state.connectionState);
 
   const messagesQuery = useQuery({
@@ -87,6 +88,16 @@ export function RoomChat({
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto">
+        {messagesQuery.isError ? (
+          <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Unable to load this room right now.
+          </div>
+        ) : null}
+        {messages.length === 0 && !messagesQuery.isLoading ? (
+          <div className="rounded-[22px] border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted)]">
+            No messages yet. Start the conversation with your peers.
+          </div>
+        ) : null}
         {messages.map((message) => (
           <div
             key={message.id}

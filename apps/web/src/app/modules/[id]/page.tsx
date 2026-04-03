@@ -17,18 +17,21 @@ export default function ModulePage({
 }) {
   return (
     <ProtectedPage>
-      {() => <ModuleWorkspace params={params} />}
+      {(session) => <ModuleWorkspace params={params} userId={session.user.id} />}
     </ProtectedPage>
   );
 }
 
 function ModuleWorkspace({
   params,
+  userId,
 }: {
   params: Promise<{ id: string }>;
+  userId: string;
 }) {
   const { id } = use(params);
   const [submissions, setSubmissions] = useState<Record<string, { text: string; url: string }>>({});
+  const [lessonCompletion, setLessonCompletion] = useState<Record<string, string>>({});
 
   const moduleQuery = useQuery({
     queryKey: ["module", id],
@@ -38,6 +41,24 @@ function ModuleWorkspace({
   const submitMutation = useMutation({
     mutationFn: async (payload: { taskId: string; submissionText?: string; submissionUrl?: string }) =>
       postJson<TaskAttempt>(`/tasks/${payload.taskId}/submit`, payload),
+  });
+
+  const completeLessonMutation = useMutation({
+    mutationFn: async (lessonId: string) =>
+      postJson<{
+        xpAwarded: number;
+        moduleBonusXp: number;
+        streakBonusXp: number;
+        alreadyCompleted: boolean;
+      }>(`/skills/lessons/${lessonId}/complete`, { userId }),
+    onSuccess: (result, lessonId) => {
+      setLessonCompletion((current) => ({
+        ...current,
+        [lessonId]: result.alreadyCompleted
+          ? "Lesson already completed."
+          : `Lesson completed. You earned ${result.xpAwarded} XP.`,
+      }));
+    },
   });
 
   const moduleData = moduleQuery.data;
@@ -64,7 +85,7 @@ function ModuleWorkspace({
                 {lesson.contentRef.map((content) => (
                   <a
                     key={`${lesson.id}-${content.sourceId}`}
-                    href={content.canonicalUrl}
+                    href={content.canonicalUrl || content.url || "#"}
                     target="_blank"
                     rel="noreferrer"
                     className="secondary-button"
@@ -74,6 +95,23 @@ function ModuleWorkspace({
                   </a>
                 ))}
               </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={completeLessonMutation.isPending}
+                  onClick={() => completeLessonMutation.mutate(lesson.id)}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Complete lesson
+                </button>
+                {lesson.contentRef[0]?.xp ? <span className="pill">{lesson.contentRef[0].xp} XP</span> : null}
+              </div>
+              {lessonCompletion[lesson.id] ? (
+                <div className="mt-3 rounded-[20px] border border-[var(--brand)]/20 bg-[var(--brand-soft)] p-4 text-sm text-[var(--brand)]">
+                  {lessonCompletion[lesson.id]}
+                </div>
+              ) : null}
             </div>
           ))}
         </Panel>
