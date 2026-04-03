@@ -147,6 +147,55 @@ export const createUser = async (
   return findUserById(db, userId);
 };
 
+export const createGuestUser = async (
+  env: AppBindings,
+  db: D1Database,
+  payload: {
+    ttlSeconds: number;
+  },
+) => {
+  const userId = randomId();
+  const passwordHash = await hashPassword(randomToken(48));
+  const now = isoNow();
+  const guestLabel = randomToken(6).slice(0, 8).toUpperCase();
+
+  await runStatement(
+    db,
+    `INSERT INTO users (id, email, password_hash, role, status, email_verified_at, created_at, updated_at)
+     VALUES (?, ?, ?, 'user', 'guest', ?, ?, ?)`,
+    [userId, `guest-${userId}@guest.skillset.ai`, passwordHash, now, now, now],
+  );
+
+  await runStatement(
+    db,
+    `INSERT INTO profiles (
+       user_id,
+       display_name,
+       bio,
+       avatar_url,
+       timezone,
+       language,
+       experience_level,
+       weekly_hours
+     )
+     VALUES (?, ?, ?, NULL, NULL, 'en', 'beginner', 4)`,
+    [userId, `Guest ${guestLabel}`, 'Temporary guest profile'],
+  );
+
+  await env.CACHE.put(
+    `guest_session:${userId}`,
+    JSON.stringify({
+      userId,
+      expiresAt: addSeconds(payload.ttlSeconds),
+    }),
+    {
+      expirationTtl: payload.ttlSeconds,
+    },
+  );
+
+  return findUserById(db, userId);
+};
+
 export const validateUserPassword = async (user: UserRow, password: string) =>
   verifyPassword(password, user.password_hash);
 
@@ -288,6 +337,9 @@ export const verifyEmailToken = async (
 
   return true;
 };
+
+export const isGuestSessionValid = async (env: AppBindings, userId: string) =>
+  Boolean(await env.CACHE.get(`guest_session:${userId}`));
 
 export const listUsers = async (db: D1Database) =>
   allRows<UserRow>(

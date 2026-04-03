@@ -3,6 +3,7 @@ import type { MiddlewareHandler } from 'hono';
 import { verifyAccessToken } from '../lib/auth';
 import { jsonError } from '../lib/http';
 import { applyRateLimit } from '../lib/rate-limit';
+import { isGuestSessionValid } from '../services/auth-service';
 import type { AppBindings, AppVariables } from '../types';
 
 type AppMiddleware = MiddlewareHandler<{
@@ -24,6 +25,11 @@ export const requireAuth: AppMiddleware = async (c, next) => {
 
   try {
     const user = await verifyAccessToken(c.env, token);
+
+    if (user.status === 'guest' && !(await isGuestSessionValid(c.env, user.id))) {
+      return jsonError(c, 401, 'Guest session expired');
+    }
+
     c.set('authUser', user);
     await next();
   } catch {

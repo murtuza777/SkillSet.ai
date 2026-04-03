@@ -10,11 +10,13 @@ import { requireCurrentUser } from '../lib/session';
 import { rateLimit, requireAuth } from '../middleware/auth';
 import {
   createEmailVerificationToken,
+  createGuestUser,
   createRefreshSession,
   createUser,
   findUserByEmail,
   findUserById,
   getUserWithProfile,
+  isGuestSessionValid,
   mapUserRowToAuthUser,
   revokeRefreshToken,
   rotateRefreshSession,
@@ -57,7 +59,7 @@ const setRefreshCookie = (
 ) => {
   setCookie(c, refreshCookieName, token, {
     httpOnly: true,
-    sameSite: 'Lax',
+    sameSite: c.req.url.startsWith('https://') ? 'None' : 'Lax',
     secure: c.req.url.startsWith('https://'),
     path: '/',
     maxAge: ttlSeconds,
@@ -132,6 +134,37 @@ app.post(
   },
 );
 
+app.post(
+  '/guest',
+  rateLimit('auth-guest', (env) => Number.parseInt(env.AUTH_RATE_LIMIT_MAX_REQUESTS, 10) || 10),
+  async (c) => {
+    const refreshTtl = Number.parseInt(c.env.REFRESH_TOKEN_TTL_SECONDS, 10) || 2592000;
+    const guest = await createGuestUser(c.env, c.env.DB, {
+      ttlSeconds: Math.min(refreshTtl, 7 * 24 * 60 * 60),
+    });
+
+    if (!guest) {
+      return jsonError(c, 500, 'Unable to create guest session');
+    }
+
+    const authUser = mapUserRowToAuthUser(guest);
+    const accessToken = await signAccessToken(c.env, authUser);
+    const refreshSession = await createRefreshSession(c.env.DB, {
+      userId: guest.id,
+      ttlSeconds: refreshTtl,
+      ipAddress: c.req.header('CF-Connecting-IP') ?? null,
+      userAgent: c.req.header('user-agent') ?? null,
+    });
+
+    setRefreshCookie(c, refreshSession.plainToken, refreshTtl);
+
+    return jsonSuccess(c, {
+      accessToken,
+      user: authUser,
+    });
+  },
+);
+
 app.post('/refresh', async (c) => {
   const refreshToken = getCookie(c, refreshCookieName);
 
@@ -157,6 +190,11 @@ app.post('/refresh', async (c) => {
   if (!user) {
     deleteCookie(c, refreshCookieName, { path: '/' });
     return jsonError(c, 401, 'Refresh token user no longer exists');
+  }
+
+  if (user.status === 'guest' && !(await isGuestSessionValid(c.env, user.id))) {
+    deleteCookie(c, refreshCookieName, { path: '/' });
+    return jsonError(c, 401, 'Guest session expired');
   }
 
   const accessToken = await signAccessToken(c.env, mapUserRowToAuthUser(user));
