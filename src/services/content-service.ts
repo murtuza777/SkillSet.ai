@@ -436,13 +436,12 @@ export const ingestSourceById = async (env: AppBindings, db: D1Database, sourceI
     await env.CONTENT_INDEX.deleteByIds(existingVectorIds);
   }
 
-  let rawPayload = '';
-  if (source.source_type === 'doc') {
-    const response = await fetch(source.canonical_url);
-    rawPayload = response.ok ? await response.text() : sourceTextFromMetadata(source);
-  } else {
-    rawPayload = sourceTextFromMetadata(source);
-  }
+  const rawPayload =
+    source.source_type === 'doc'
+      ? await fetch(source.canonical_url)
+          .then(async (response) => (response.ok ? response.text() : sourceTextFromMetadata(source)))
+          .catch(() => sourceTextFromMetadata(source))
+      : sourceTextFromMetadata(source);
 
   await env.CONTENT_BUCKET.put(`sources/${source.id}/raw.txt`, rawPayload, {
     httpMetadata: { contentType: 'text/plain; charset=utf-8' },
@@ -541,15 +540,31 @@ export const semanticContentLookup = async (
     text: string;
     summary: string | null;
     vector_id: string | null;
+    metadata_json: string | null;
   }>(
     db,
-    `SELECT id, content_source_id, chunk_index, text, summary, vector_id
-     FROM content_chunks
-     WHERE vector_id IN (${placeholders(vectorIds.length)})`,
+    `SELECT cc.id, cc.content_source_id, cc.chunk_index, cc.text, cc.summary, cc.vector_id, cs.metadata_json
+     FROM content_chunks cc
+     JOIN content_sources cs ON cs.id = cc.content_source_id
+     WHERE cc.vector_id IN (${placeholders(vectorIds.length)})`,
     vectorIds,
   );
 
-  const byVectorId = new Map(rows.map((row) => [row.vector_id, row]));
+  const scopedRows = rows.filter((row) => {
+    const metadata = safeJsonParse<Record<string, unknown>>(row.metadata_json, {});
+
+    if (payload.skillId && metadata.skillId !== payload.skillId) {
+      return false;
+    }
+
+    if (payload.skillSlug && metadata.skillSlug !== payload.skillSlug) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const byVectorId = new Map(scopedRows.map((row) => [row.vector_id, row]));
 
   return matches.matches
     .map((match) => {
