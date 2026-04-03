@@ -54,11 +54,18 @@ export default function Home() {
     <div className="space-y-8 pb-10">
       <section className="hero-mesh glass-card relative overflow-hidden rounded-[40px] border border-[var(--border)] px-6 py-14 sm:px-10 sm:py-18">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-[540px] w-[540px] max-w-[95%] opacity-85 sm:h-[680px] sm:w-[680px]">
+          <div className="h-[540px] w-[540px] max-w-[95%] sm:h-[680px] sm:w-[680px]">
             <GlobeInteractive className="h-full w-full" speed={0.0025} />
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--brand-soft)_45%,var(--bg)_92%)]" />
+        {/* Light vignette only at edges so the globe stays crisp and readable in the center */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 85% 75% at 50% 48%, transparent 0%, transparent 42%, rgba(233, 239, 255, 0.45) 72%, rgba(243, 246, 251, 0.88) 100%)",
+          }}
+        />
         <div className="relative z-10 flex flex-col items-center space-y-8 text-center">
           <span className="pill pointer-events-auto bg-[var(--brand-soft)] text-[var(--brand)]">
             <Sparkles className="h-4 w-4" />

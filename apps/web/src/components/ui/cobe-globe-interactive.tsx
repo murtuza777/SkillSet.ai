@@ -88,15 +88,15 @@ export function GlobeInteractive({
       if (globe) return;
 
       globe = createGlobe(canvas, {
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 3),
         width,
         height: width,
         phi: 0,
         theta: 0.2,
         dark: 0,
-        diffuse: 1.4,
-        mapSamples: 16000,
-        mapBrightness: 8,
+        diffuse: 1.35,
+        mapSamples: 20000,
+        mapBrightness: 9,
         baseColor: [0.86, 0.91, 1],
         markerColor: [0.14, 0.34, 0.74],
         glowColor: [0.82, 0.9, 1],
@@ -106,7 +106,7 @@ export function GlobeInteractive({
         arcColor: [0.16, 0.33, 0.68],
         arcWidth: 0.5,
         arcHeight: 0.25,
-        opacity: 0.8,
+        opacity: 1,
       });
 
       function animate() {
