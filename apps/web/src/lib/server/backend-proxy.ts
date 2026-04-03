@@ -59,6 +59,29 @@ const setAccessCookie = (
   });
 };
 
+const setRefreshCookie = (
+  response: NextResponse,
+  request: NextRequest,
+  refreshToken: string | null,
+  ttlSeconds?: number | null,
+) => {
+  if (!refreshToken) {
+    response.cookies.delete(REFRESH_COOKIE_NAME);
+    return;
+  }
+
+  response.cookies.set(REFRESH_COOKIE_NAME, refreshToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isSecureRequest(request),
+    path: "/",
+    maxAge:
+      typeof ttlSeconds === "number" && Number.isFinite(ttlSeconds)
+        ? Math.max(1, Math.floor(ttlSeconds))
+        : undefined,
+  });
+};
+
 const getAccessTokenFromPayload = (payload: JsonRecord | null) => {
   if (!payload?.success || !payload.data || typeof payload.data !== "object") {
     return null;
@@ -68,14 +91,46 @@ const getAccessTokenFromPayload = (payload: JsonRecord | null) => {
   return typeof accessToken === "string" ? accessToken : null;
 };
 
+const getRefreshTokenFromPayload = (payload: JsonRecord | null) => {
+  if (!payload?.success || !payload.data || typeof payload.data !== "object") {
+    return null;
+  }
+
+  const refreshToken = (payload.data as JsonRecord).refreshToken;
+  return typeof refreshToken === "string" ? refreshToken : null;
+};
+
+const getRefreshTtlFromPayload = (payload: JsonRecord | null) => {
+  if (!payload?.success || !payload.data || typeof payload.data !== "object") {
+    return null;
+  }
+
+  const ttl = (payload.data as JsonRecord).refreshTokenTtlSeconds;
+  return typeof ttl === "number" && Number.isFinite(ttl) ? ttl : null;
+};
+
 const appendRefreshCookie = (
   response: NextResponse,
   backendResponse: Response,
 ) => {
-  const refreshCookie = backendResponse.headers.get("set-cookie");
+  const headers = backendResponse.headers as Headers & {
+    getSetCookie?: () => string[];
+  };
+  const setCookies =
+    typeof headers.getSetCookie === "function"
+      ? headers.getSetCookie()
+      : [];
 
-  if (refreshCookie) {
-    response.headers.append("set-cookie", refreshCookie);
+  if (setCookies.length > 0) {
+    for (const cookie of setCookies) {
+      response.headers.append("set-cookie", cookie);
+    }
+    return;
+  }
+
+  const setCookie = backendResponse.headers.get("set-cookie");
+  if (setCookie) {
+    response.headers.append("set-cookie", setCookie);
   }
 };
 
@@ -105,6 +160,8 @@ const createProxyResponse = (
   bodyText: string,
   options?: {
     accessToken?: string | null;
+    refreshToken?: string | null;
+    refreshTokenTtlSeconds?: number | null;
     clearAccess?: boolean;
   },
 ) => {
@@ -120,8 +177,17 @@ const createProxyResponse = (
 
   if (options?.clearAccess) {
     response.cookies.delete(ACCESS_COOKIE_NAME);
-  } else if (options && "accessToken" in options) {
-    setAccessCookie(response, request, options.accessToken ?? null);
+  } else if (options?.accessToken !== undefined) {
+    setAccessCookie(response, request, options.accessToken);
+  }
+
+  if (options?.refreshToken !== undefined) {
+    setRefreshCookie(
+      response,
+      request,
+      options.refreshToken,
+      options.refreshTokenTtlSeconds ?? null,
+    );
   }
 
   return response;
@@ -138,6 +204,8 @@ const sanitizeAuthPayload = (payload: JsonRecord | null) => {
 
   const data = { ...(payload.data as JsonRecord) };
   delete data.accessToken;
+  delete data.refreshToken;
+  delete data.refreshTokenTtlSeconds;
   return {
     ...payload,
     data,
@@ -175,6 +243,14 @@ const refreshAccessToken = async () => {
     payload?.success && payload.data && typeof payload.data === "object"
       ? (payload.data as JsonRecord).accessToken
       : null;
+  const refreshToken =
+    payload?.success && payload.data && typeof payload.data === "object"
+      ? (payload.data as JsonRecord).refreshToken
+      : null;
+  const refreshTokenTtlSeconds =
+    payload?.success && payload.data && typeof payload.data === "object"
+      ? (payload.data as JsonRecord).refreshTokenTtlSeconds
+      : null;
 
   if (typeof accessToken !== "string") {
     return null;
@@ -184,6 +260,12 @@ const refreshAccessToken = async () => {
     backendResponse: response,
     bodyText,
     accessToken,
+    refreshToken: typeof refreshToken === "string" ? refreshToken : null,
+    refreshTokenTtlSeconds:
+      typeof refreshTokenTtlSeconds === "number" &&
+      Number.isFinite(refreshTokenTtlSeconds)
+        ? refreshTokenTtlSeconds
+        : null,
   };
 };
 
@@ -191,13 +273,22 @@ export const proxyAuthMutation = async (
   request: NextRequest,
   backendPath: string,
 ) => {
+  const headers = getForwardHeaders(request);
+  const cookieHeader = request.headers.get("cookie");
+  if (
+    cookieHeader &&
+    (backendPath === "/auth/refresh" || backendPath === "/auth/logout")
+  ) {
+    headers.set("cookie", cookieHeader);
+  }
+
   const bodyText =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
       : await request.text();
   const backendResponse = await fetchBackend(backendPath, {
     method: request.method,
-    headers: getForwardHeaders(request),
+    headers,
     body: bodyText,
   });
   const responseText = await backendResponse.text();
@@ -209,6 +300,8 @@ export const proxyAuthMutation = async (
     payload ? JSON.stringify(payload) : responseText,
     {
       accessToken: getAccessTokenFromPayload(rawPayload),
+      refreshToken: getRefreshTokenFromPayload(rawPayload),
+      refreshTokenTtlSeconds: getRefreshTtlFromPayload(rawPayload),
       clearAccess: backendPath === "/auth/logout",
     },
   );
@@ -237,6 +330,8 @@ export const proxyToBackend = async (
   });
   let responseText = await backendResponse.text();
   let refreshedAccessToken: string | null | undefined;
+  let refreshedRefreshToken: string | null | undefined;
+  let refreshedRefreshTtl: number | null | undefined;
   let refreshResponse: Response | null = null;
 
   if (backendResponse.status === 401) {
@@ -244,6 +339,8 @@ export const proxyToBackend = async (
 
     if (refreshed) {
       refreshedAccessToken = refreshed.accessToken;
+      refreshedRefreshToken = refreshed.refreshToken;
+      refreshedRefreshTtl = refreshed.refreshTokenTtlSeconds;
       refreshResponse = refreshed.backendResponse;
       backendResponse = await fetchBackend(backendPath, {
         method: request.method,
@@ -256,6 +353,8 @@ export const proxyToBackend = async (
 
   const response = createProxyResponse(request, backendResponse, responseText, {
     accessToken: refreshedAccessToken,
+    refreshToken: refreshedRefreshToken,
+    refreshTokenTtlSeconds: refreshedRefreshTtl,
     clearAccess: backendResponse.status === 401,
   });
 

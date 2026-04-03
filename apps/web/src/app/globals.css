@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f3f6fb;
+  --ink: #172337;
+  --muted: #5a667d;
+  --brand: #2756c9;
+  --brand-soft: #e9efff;
+  --accent: #0f766e;
+  --accent-soft: #e7fbf6;
+  --border: #d9e1f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.section-title {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+}
+
+.glass-card {
+  border: 1px solid var(--border);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(248, 251, 255, 0.78));
+  box-shadow: 0 20px 46px rgba(22, 41, 85, 0.08);
+}
+
+.hero-mesh {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(39, 86, 201, 0.15), transparent 38%),
+    radial-gradient(circle at 84% 10%, rgba(15, 118, 110, 0.12), transparent 34%),
+    radial-gradient(circle at 52% 94%, rgba(39, 86, 201, 0.1), transparent 36%);
+}
+
+.logo-mark {
+  display: inline-block;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-radius: 0.35rem;
+  background: linear-gradient(145deg, #4876e8 0%, #2756c9 55%, #153a97 100%);
+  box-shadow: 0 6px 18px rgba(39, 86, 201, 0.35);
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.62rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: all 140ms ease;
+}
+
+.primary-button {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #3a66db 0%, #2756c9 100%);
+  color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(39, 86, 201, 0.28);
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+}
+
+.secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: white;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.68rem 0.86rem;
+  color: var(--ink);
+  outline: none;
+}
+
+.field:focus {
+  border-color: #8eabf6;
+  box-shadow: 0 0 0 3px rgba(39, 86, 201, 0.16);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem 0.62rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.loading-spinner {
+  height: 0.95rem;
+  width: 0.95rem;
+  border-radius: 999px;
+  border: 2px solid rgba(39, 86, 201, 0.25);
+  border-top-color: var(--brand);
+  animation: spin 650ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

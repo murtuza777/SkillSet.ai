@@ -102,6 +102,8 @@ app.post(
       c,
       {
         accessToken,
+        refreshToken: refreshSession.plainToken,
+        refreshTokenTtlSeconds: refreshTtl,
         user: authUser,
         verificationToken,
       },
@@ -142,6 +144,8 @@ app.post(
 
     return jsonSuccess(c, {
       accessToken,
+      refreshToken: refreshSession.plainToken,
+      refreshTokenTtlSeconds: refreshTtl,
       user: authUser,
     });
   },
@@ -173,6 +177,8 @@ app.post(
 
     return jsonSuccess(c, {
       accessToken,
+      refreshToken: refreshSession.plainToken,
+      refreshTokenTtlSeconds: refreshTtl,
       user: authUser,
     });
   },
@@ -215,6 +221,8 @@ app.post('/refresh', async (c) => {
 
   return jsonSuccess(c, {
     accessToken,
+    refreshToken: session.plainToken,
+    refreshTokenTtlSeconds: refreshTtl,
     user: mapUserRowToAuthUser(user),
   });
 });

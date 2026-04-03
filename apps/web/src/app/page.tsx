@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { GlobeInteractive } from "@/components/ui/cobe-globe-interactive";
 import { Panel } from "@/components/ui/panel";
 import { SectionHeading } from "@/components/ui/section-heading";
 
@@ -51,78 +52,94 @@ const highlights = [
 export default function Home() {
   return (
     <div className="space-y-8 pb-10">
-      <section className="hero-mesh glass-card overflow-hidden rounded-[40px] border border-[var(--border)] px-6 py-10 sm:px-10 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="space-y-7">
-            <span className="pill bg-[var(--brand-soft)] text-[var(--brand)]">
-              <Sparkles className="h-4 w-4" />
-              AI-powered collaborative learning
-            </span>
-            <div className="space-y-4">
-              <h1 className="section-title max-w-4xl text-5xl font-bold leading-[0.94] tracking-[-0.06em] sm:text-6xl">
-                Learn a skill, meet the right peers, and ship projects with momentum.
-              </h1>
-              <p className="max-w-2xl text-xl text-[var(--muted)]">
-                SkillSet.ai combines AI-personalized learning paths, smart
-                content discovery, project rooms, peer matching, and gamified
-                progress — all in one platform.
+      <section className="hero-mesh glass-card relative overflow-hidden rounded-[40px] border border-[var(--border)] px-6 py-14 sm:px-10 sm:py-18">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="h-[540px] w-[540px] max-w-[95%] opacity-85 sm:h-[680px] sm:w-[680px]">
+            <GlobeInteractive className="h-full w-full" speed={0.0025} />
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--brand-soft)_45%,var(--bg)_92%)]" />
+        <div className="relative z-10 flex flex-col items-center space-y-8 text-center">
+          <span className="pill pointer-events-auto bg-[var(--brand-soft)] text-[var(--brand)]">
+            <Sparkles className="h-4 w-4" />
+            AI-powered collaborative learning
+          </span>
+          <div className="space-y-4">
+            <h1 className="section-title mx-auto max-w-4xl text-5xl font-bold leading-[0.94] tracking-[-0.06em] sm:text-6xl">
+              Learn a skill, meet the right peers, and ship projects with momentum.
+            </h1>
+            <p className="mx-auto max-w-2xl text-xl text-[var(--muted)]">
+              SkillSet.ai combines AI-personalized learning paths, smart content
+              discovery, project rooms, peer matching, and gamified progress -
+              all in one platform.
+            </p>
+          </div>
+          <div className="pointer-events-auto flex flex-col gap-3 sm:flex-row">
+            <Link href="/auth" className="primary-button">
+              Get started free
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href="/skills" className="secondary-button">
+              Explore the skill catalog
+            </Link>
+          </div>
+          <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3">
+            {highlights.map((highlight) => (
+              <span key={highlight} className="pill">
+                {highlight}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <Panel className="space-y-5 bg-[rgba(255,255,255,0.82)]">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-[var(--accent-soft)] p-3 text-[var(--accent)]">
+              <Gauge className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                How it works
               </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/auth" className="primary-button">
-                Get started free
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/skills" className="secondary-button">
-                Explore the skill catalog
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {highlights.map((highlight) => (
-                <span key={highlight} className="pill">
-                  {highlight}
-                </span>
-              ))}
+              <h2 className="section-title text-2xl font-bold">
+                One platform, multiple learning loops
+              </h2>
             </div>
           </div>
 
-          <Panel className="space-y-5 bg-[rgba(255,255,255,0.82)]">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-[var(--accent-soft)] p-3 text-[var(--accent)]">
-                <Gauge className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  How it works
-                </p>
-                <h2 className="section-title text-2xl font-bold">
-                  One platform, multiple learning loops
-                </h2>
-              </div>
+          <div className="grid gap-4">
+            <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
+              <p className="text-sm font-semibold text-[var(--brand)]">
+                Personalized paths
+              </p>
+              <p className="mt-2 text-[var(--muted)]">
+                Tell us your goal and we&apos;ll generate a structured learning
+                path with modules, lessons, and tasks pulled from the best
+                sources.
+              </p>
             </div>
-
-            <div className="grid gap-4">
-              <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Personalized paths</p>
-                <p className="mt-2 text-[var(--muted)]">
-                  Tell us your goal and we&apos;ll generate a structured learning path with modules, lessons, and tasks pulled from the best sources.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Realtime collaboration</p>
-                <p className="mt-2 text-[var(--muted)]">
-                  Join project rooms, chat with learning partners, and build together in real time without leaving the platform.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Motivation that works</p>
-                <p className="mt-2 text-[var(--muted)]">
-                  Earn points, unlock badges, and track your level progression so you always see how far you&apos;ve come.
-                </p>
-              </div>
+            <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
+              <p className="text-sm font-semibold text-[var(--brand)]">
+                Realtime collaboration
+              </p>
+              <p className="mt-2 text-[var(--muted)]">
+                Join project rooms, chat with learning partners, and build
+                together in real time without leaving the platform.
+              </p>
             </div>
-          </Panel>
-        </div>
+            <div className="rounded-[24px] border border-[var(--border)] bg-white/80 p-4">
+              <p className="text-sm font-semibold text-[var(--brand)]">
+                Motivation that works
+              </p>
+              <p className="mt-2 text-[var(--muted)]">
+                Earn points, unlock badges, and track your level progression so
+                you always see how far you&apos;ve come.
+              </p>
+            </div>
+          </div>
+        </Panel>
       </section>
 
       <section className="space-y-6">
