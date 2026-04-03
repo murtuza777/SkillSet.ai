@@ -26,7 +26,11 @@ const getApiBaseUrl = async () => {
     throw new Error("SKILLSET_API_BASE_URL is not configured");
   }
 
-  return baseUrl.replace(/\/$/, "");
+  const trimmed = baseUrl.trim();
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  return withProtocol.replace(/\/$/, "");
 };
 
 const parseJson = (value: string) => {
