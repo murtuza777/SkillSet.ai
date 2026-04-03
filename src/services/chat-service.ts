@@ -173,15 +173,24 @@ export const createMessage = async (
     ],
   );
 
+  const profile = await firstRow<{ display_name: string | null }>(
+    db,
+    `SELECT display_name FROM profiles WHERE user_id = ? LIMIT 1`,
+    [payload.senderId],
+  );
+
   return {
     id: messageId,
     roomId: payload.roomId,
     senderId: payload.senderId,
+    senderName: profile?.display_name ?? undefined,
     messageType: payload.messageType ?? 'text',
     body: payload.body,
     attachments: payload.attachments ?? null,
     replyToMessageId: payload.replyToMessageId ?? null,
     createdAt,
+    editedAt: null as string | null,
+    deletedAt: null as string | null,
   };
 };
 
@@ -189,20 +198,48 @@ export const broadcastRoomEvent = async (
   env: AppBindings,
   roomId: string,
   event: { type: string; payload: unknown },
+  request?: Request,
 ) => {
   const stub = env.ROOM_HUB.get(env.ROOM_HUB.idFromName(roomId));
-  await stub.fetch(`${env.APP_BASE_URL}/internal/rooms/${roomId}/broadcast`, {
+  const originFromRequest = request ? new URL(request.url).origin : '';
+  const configured = (env.APP_BASE_URL ?? '').replace(/\/$/, '');
+  const base = originFromRequest || configured;
+
+  if (!base) {
+    console.error('broadcastRoomEvent: set APP_BASE_URL or invoke from an HTTP request');
+    return;
+  }
+
+  const internalUrl = `${base}/internal/rooms/${encodeURIComponent(roomId)}/broadcast`;
+  const res = await stub.fetch(internalUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(event),
   });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error('broadcastRoomEvent failed', res.status, detail);
+  }
 };
 
-export const buildRoomSocketUrl = (baseUrl: string, roomId: string, token: string) => {
-  const url = new URL(baseUrl);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = `/ws/rooms/${roomId}`;
-  url.search = '';
-  url.searchParams.set('token', token);
-  return url.toString();
+/** Build a browser-safe WebSocket URL (honours X-Forwarded-* when present). */
+export const buildRoomSocketUrl = (input: Request | string, roomId: string, token: string) => {
+  const parsed = typeof input === 'string' ? new URL(input) : new URL(input.url);
+  const forwardedProto =
+    typeof input !== 'string' ? input.headers.get('x-forwarded-proto') : null;
+  const forwardedHost =
+    typeof input !== 'string'
+      ? input.headers.get('x-forwarded-host') ?? input.headers.get('host')
+      : null;
+
+  const host = forwardedHost?.split(',')[0]?.trim() ?? parsed.host;
+  const protoRaw =
+    forwardedProto?.split(',')[0]?.trim() ?? parsed.protocol.replace(':', '');
+  const proto = protoRaw.toLowerCase();
+  const wsProto = proto === 'https' ? 'wss' : 'ws';
+
+  const out = new URL(`${wsProto}://${host}/ws/rooms/${encodeURIComponent(roomId)}`);
+  out.searchParams.set('token', token);
+  return out.toString();
 };

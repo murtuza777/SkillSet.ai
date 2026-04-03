@@ -53,19 +53,9 @@ export const sendSquadMessage = async (
     messageType: 'text',
   });
 
-  const profile = await firstRow<{ display_name: string | null }>(
-    db,
-    `SELECT display_name
-     FROM profiles
-     WHERE user_id = ?
-     LIMIT 1`,
-    [payload.userId],
-  );
-
   const eventPayload = {
     ...stored,
     squadId: payload.squadId,
-    senderName: profile?.display_name ?? 'User',
   };
 
   await broadcastRoomEvent(env, squad.room_id, {

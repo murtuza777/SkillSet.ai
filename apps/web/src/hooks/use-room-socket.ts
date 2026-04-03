@@ -11,8 +11,15 @@ interface RoomEvent {
   payload: Message | { userId: string; status?: string; roomId?: string };
 }
 
+const MAX_RECONNECT_ATTEMPTS = 8;
+const BASE_RECONNECT_MS = 900;
+
 export const useRoomSocket = (roomId: string | null) => {
   const socketRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
+
   const addRoomMessage = useChatStore((state) => state.addRoomMessage);
   const setConnectionState = useChatStore((state) => state.setConnectionState);
   const setTypingUsers = useChatStore((state) => state.setTypingUsers);
@@ -39,37 +46,109 @@ export const useRoomSocket = (roomId: string | null) => {
   });
 
   useEffect(() => {
+    cancelledRef.current = false;
+
     if (!roomId) {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      socketRef.current?.close();
+      socketRef.current = null;
       setConnectionState("idle");
+      reconnectAttemptsRef.current = 0;
       return;
     }
 
-    let isMounted = true;
-    setConnectionState("connecting");
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
 
-    postJson<RoomJoinToken>(`/rooms/${roomId}/join-token`)
-      .then((session) => {
-        if (!isMounted) {
+    const attachSocket = (socket: WebSocket) => {
+      socketRef.current = socket;
+
+      socket.addEventListener("open", () => {
+        if (cancelledRef.current) {
+          return;
+        }
+        reconnectAttemptsRef.current = 0;
+        setConnectionState("open");
+      });
+
+      socket.addEventListener("close", () => {
+        socketRef.current = null;
+        if (cancelledRef.current) {
+          return;
+        }
+        setConnectionState("closed");
+        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          return;
+        }
+        reconnectAttemptsRef.current += 1;
+        const delay = Math.min(
+          30_000,
+          BASE_RECONNECT_MS * reconnectAttemptsRef.current,
+        );
+        clearReconnectTimer();
+        reconnectTimerRef.current = setTimeout(() => {
+          void connect();
+        }, delay);
+      });
+
+      socket.addEventListener("message", (messageEvent) => {
+        try {
+          const payload = JSON.parse(messageEvent.data as string) as RoomEvent;
+          handleEvent(payload);
+        } catch {
+          /* ignore malformed frames */
+        }
+      });
+    };
+
+    const connect = async () => {
+      if (cancelledRef.current || !roomId) {
+        return;
+      }
+
+      setConnectionState("connecting");
+
+      try {
+        const session = await postJson<RoomJoinToken>(`/rooms/${roomId}/join-token`);
+        if (cancelledRef.current) {
           return;
         }
 
         const socket = new WebSocket(session.websocketUrl);
-        socketRef.current = socket;
-        socket.addEventListener("open", () => setConnectionState("open"));
-        socket.addEventListener("close", () => setConnectionState("closed"));
-        socket.addEventListener("message", (messageEvent) => {
-          const payload = JSON.parse(messageEvent.data) as RoomEvent;
-          handleEvent(payload);
-        });
-      })
-      .catch(() => {
-        if (isMounted) {
-          setConnectionState("closed");
+        attachSocket(socket);
+      } catch {
+        if (cancelledRef.current) {
+          return;
         }
-      });
+        setConnectionState("closed");
+        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          return;
+        }
+        reconnectAttemptsRef.current += 1;
+        const delay = Math.min(
+          30_000,
+          BASE_RECONNECT_MS * reconnectAttemptsRef.current,
+        );
+        clearReconnectTimer();
+        reconnectTimerRef.current = setTimeout(() => {
+          void connect();
+        }, delay);
+      }
+    };
+
+    reconnectAttemptsRef.current = 0;
+    void connect();
 
     return () => {
-      isMounted = false;
+      cancelledRef.current = true;
+      clearReconnectTimer();
       socketRef.current?.close();
       socketRef.current = null;
       setConnectionState("closed");

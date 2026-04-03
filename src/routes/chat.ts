@@ -104,18 +104,17 @@ app.post(
       replyToMessageId: payload.replyToMessageId,
     });
 
-    await broadcastRoomEvent(c.env, roomId, {
-      type: 'message.received',
-      payload: message,
-    });
-
-    return jsonSuccess(
-      c,
+    await broadcastRoomEvent(
+      c.env,
+      roomId,
       {
-        id: message.id,
+        type: 'message.received',
+        payload: message,
       },
-      201,
+      c.req.raw,
     );
+
+    return jsonSuccess(c, message, 201);
   },
 );
 
@@ -135,7 +134,7 @@ app.post('/rooms/:id/join-token', requireAuth, async (c) => {
 
   return jsonSuccess(c, {
     token,
-    websocketUrl: buildRoomSocketUrl(c.req.url, roomId, token),
+    websocketUrl: buildRoomSocketUrl(c.req.raw, roomId, token),
   });
 });
 

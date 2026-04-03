@@ -23,11 +23,12 @@ export function RoomChat({
   const { send } = useRoomSocket(roomId);
   const setActiveRoomId = useChatStore((state) => state.setActiveRoomId);
   const setRoomMessages = useChatStore((state) => state.setRoomMessages);
+  const addRoomMessage = useChatStore((state) => state.addRoomMessage);
+  const connectionState = useChatStore((state) => state.connectionState);
   const roomMessages = useChatStore((state) =>
     roomId ? state.messagesByRoom[roomId] : undefined,
   );
   const messages = roomMessages ?? [];
-  const connectionState = useChatStore((state) => state.connectionState);
 
   const messagesQuery = useQuery({
     queryKey: ["room-messages", roomId],
@@ -38,16 +39,23 @@ export function RoomChat({
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!roomId) {
-        return;
+        return null;
+      }
+      const body = draft.trim();
+      if (!body) {
+        return null;
       }
 
-      await postJson(`/rooms/${roomId}/messages`, {
-        body: draft,
+      return postJson<Message>(`/rooms/${roomId}/messages`, {
+        body,
         messageType: "text",
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (message) => {
       setDraft("");
+      if (roomId && message) {
+        addRoomMessage(roomId, message);
+      }
       if (roomId) {
         await queryClient.invalidateQueries({ queryKey: ["room-messages", roomId] });
       }
@@ -118,7 +126,7 @@ export function RoomChat({
         className="flex flex-col gap-3 sm:flex-row sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!draft.trim()) {
+          if (!draft.trim() || sendMutation.isPending) {
             return;
           }
 
@@ -126,6 +134,7 @@ export function RoomChat({
             type: "typing.stop",
             payload: {},
           } as never);
+
           sendMutation.mutate();
         }}
       >
@@ -135,10 +144,12 @@ export function RoomChat({
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);
-            send({
-              type: "typing.start",
-              payload: {},
-            } as never);
+            if (connectionState === "open") {
+              send({
+                type: "typing.start",
+                payload: {},
+              } as never);
+            }
           }}
         />
         <button

@@ -16,11 +16,8 @@ export class RoomHub extends DurableObject<AppBindings> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const roomId = url.pathname.split('/').filter(Boolean).at(-1);
-
-    if (!roomId) {
-      return new Response('Room id is required', { status: 400 });
-    }
+    const roomsMatch = url.pathname.match(/\/rooms\/([^/]+)/);
+    const pathRoomId = roomsMatch?.[1] ?? null;
 
     if (request.method === 'POST' && url.pathname.includes('/broadcast')) {
       const event = (await request.json()) as RoomEvent;
@@ -31,6 +28,10 @@ export class RoomHub extends DurableObject<AppBindings> {
           'Content-Type': 'application/json',
         },
       });
+    }
+
+    if (!pathRoomId) {
+      return new Response('Room id is required', { status: 400 });
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -51,7 +52,7 @@ export class RoomHub extends DurableObject<AppBindings> {
       return new Response('Invalid room token', { status: 401 });
     }
 
-    if (roomToken.roomId !== roomId) {
+    if (roomToken.roomId !== pathRoomId) {
       return new Response('Room token does not match requested room', { status: 403 });
     }
 
@@ -60,7 +61,7 @@ export class RoomHub extends DurableObject<AppBindings> {
     const server = pair[1];
 
     server.serializeAttachment({
-      roomId,
+      roomId: pathRoomId,
       userId: roomToken.userId,
       email: roomToken.email,
       role: roomToken.role,
@@ -70,7 +71,7 @@ export class RoomHub extends DurableObject<AppBindings> {
     this.broadcast({
       type: 'presence.update',
       payload: {
-        roomId,
+        roomId: pathRoomId,
         userId: roomToken.userId,
         status: 'online',
       },
