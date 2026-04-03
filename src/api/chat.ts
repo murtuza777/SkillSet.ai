@@ -60,7 +60,11 @@ app.get('/ws', async (c) => {
     return jsonError(c, 400, 'squadId and userId query parameters are required');
   }
 
-  const session = await createSquadChatSession(c.env, c.env.DB, { squadId, userId });
+  const session = await createSquadChatSession(c.env, c.env.DB, {
+    squadId,
+    userId,
+    requestUrl: c.req.url,
+  });
   if (session === null) {
     return jsonError(c, 404, 'Squad or user was not found');
   }

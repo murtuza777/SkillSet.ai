@@ -106,6 +106,7 @@ export const createSquadChatSession = async (
   payload: {
     squadId: string;
     userId: string;
+    requestUrl: string;
   },
 ) => {
   const squad = await getSquadRoom(db, payload.squadId);
@@ -136,6 +137,6 @@ export const createSquadChatSession = async (
 
   return {
     token,
-    websocketUrl: buildRoomSocketUrl(env.APP_BASE_URL, squad.room_id, token),
+    websocketUrl: buildRoomSocketUrl(payload.requestUrl, squad.room_id, token),
   };
 };

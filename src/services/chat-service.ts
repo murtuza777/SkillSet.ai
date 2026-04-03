@@ -202,6 +202,7 @@ export const buildRoomSocketUrl = (baseUrl: string, roomId: string, token: strin
   const url = new URL(baseUrl);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.pathname = `/ws/rooms/${roomId}`;
+  url.search = '';
   url.searchParams.set('token', token);
   return url.toString();
 };

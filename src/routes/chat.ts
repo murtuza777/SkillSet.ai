@@ -135,7 +135,7 @@ app.post('/rooms/:id/join-token', requireAuth, async (c) => {
 
   return jsonSuccess(c, {
     token,
-    websocketUrl: buildRoomSocketUrl(c.env.APP_BASE_URL, roomId, token),
+    websocketUrl: buildRoomSocketUrl(c.req.url, roomId, token),
   });
 });
 
