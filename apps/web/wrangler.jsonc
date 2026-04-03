@@ -5,7 +5,7 @@
   "compatibility_date": "2026-04-03",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "vars": {
-    "SKILLSET_API_BASE_URL": "http://127.0.0.1:8787"
+    "SKILLSET_API_BASE_URL": "https://skillset-ai-api.mdmurtuzaali777.workers.dev"
   },
   "assets": {
     "directory": ".open-next/assets",
